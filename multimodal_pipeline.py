@@ -135,15 +135,20 @@ def parallel_process_videos(fnames, video_dir, text_feat_dir, visual_feat_dir, a
     # Split fnames into batches
     batches = [fnames[i:i+batch_size] for i in range(0, len(fnames), batch_size)]
     results = {}
+    total = len(fnames)
+    processed = 0
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
         futures = {executor.submit(process_video_batch, batch, video_dir, text_feat_dir, visual_feat_dir, asr_model_id): tuple(batch) for batch in batches}
         for fut in as_completed(futures):
             batch_result = fut.result()
             for fname, (text, visual, error) in batch_result.items():
+                processed += 1
                 if error == 'JSONs already exist':
-                    print(f"[SKIP] {fname}: {error}")
+                    print(f"[SKIP] {fname}: {error} | Progress: {processed}/{total} videos processed.")
                 elif error:
-                    print(f"[ERROR] {fname}: {error}")
+                    print(f"[ERROR] {fname}: {error} | Progress: {processed}/{total} videos processed.")
+                else:
+                    print(f"[DONE] {fname} | Progress: {processed}/{total} videos processed.")
                 results[fname] = (text, visual)
     return results
 
@@ -395,10 +400,12 @@ def process_split(split, video_dir, text_feat_dir, visual_feat_dir, faiss_text_p
             print(f"Progress: {done}/{total} videos processed.")
     # Save to FAISS
     if all_text_embs:
+        print("Saving text embeddings to FAISS...")
         text_db = FaissDB(dim=len(all_text_embs[0]), index_path=faiss_text_path)
         text_db.add(all_text_embs, all_text_meta)
         text_db.save()
     if all_visual_embs:
+        print("Saving visual embeddings to FAISS...")
         visual_db = FaissDB(dim=len(all_visual_embs[0]), index_path=faiss_visual_path)
         visual_db.add(all_visual_embs, all_visual_meta)
         visual_db.save()
@@ -420,9 +427,9 @@ def main():
 
   # Uncomment above and set your video path to test single video
   splits = [
-      ("train", "videos_train"),
-      ("val", "videos_val"),
-      ("test", "videos_test")
+    ("train", "videos_train"),
+    ("val", "videos_val"),
+    ("test", "videos_test")
   ]
   for split, video_dir in splits:
       print(f"Processing split: {split}")
