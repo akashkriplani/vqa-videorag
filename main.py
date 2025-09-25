@@ -4,16 +4,22 @@ High-level pipeline for Medical VideoRAG VQA.
 Each function is a placeholder for the corresponding module.
 """
 
-def load_dataset():
-    """Load MedVidQA dataset and metadata."""
+import data_preparation as dp
+import eda_medvidqa as eda
+import multimodal_pipeline as mmp
+
+def data_preparation():
+    """Load MedVidQA dataset and metadata, download videos, clean the dataset."""
+    dp.main()
+
+def data_analysis():
+    """Perform exploratory data analysis (EDA) on cleaned datasets."""
+    eda.main()
     pass
 
-def download_videos():
-    """Download YouTube videos and handle failures."""
-    pass
-
-def clean_dataset():
-    """Remove entries with failed downloads from all splits."""
+def extract_features():
+    """Extract textual and visual features."""
+    mmp.main()
     pass
 
 def extract_textual_features():
@@ -56,13 +62,11 @@ def evaluate_model():
     """Evaluate using ROUGE-L, Accuracy, BLEU, BERTScore."""
     pass
 
+def main():
+    """Run the full pipeline."""
+    data_preparation()
+    data_analysis()
+    extract_features()
+
 if __name__ == "__main__":
-    # Example pipeline flow
-    load_dataset()
-    download_videos()
-    clean_dataset()
-    extract_textual_features()
-    extract_visual_features()
-    build_vector_index()
-    setup_retriever()
-    # ...rest of pipeline...
+    main()

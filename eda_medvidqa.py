@@ -210,11 +210,15 @@ def bivariate_analysis(df, set_name):
 def multivariate_analysis(df, set_name):
     plot_heatmap_questions_vs_video_length(df, set_name)
 
+def main():
 # --- Run EDA for all sets ---
-for df, name in zip([train_df, test_df, val_df], ['Train', 'Test', 'Validation']):
-    print(f"\n{'='*20} {name} Set: Univariate Analysis {'='*20}")
-    univariate_analysis(df, name)
-    print(f"\n{'='*20} {name} Set: Bivariate Analysis {'='*20}")
-    bivariate_analysis(df, name)
-    print(f"\n{'='*20} {name} Set: Multivariate Analysis {'='*20}")
-    multivariate_analysis(df, name)
+    for df, name in zip([train_df, test_df, val_df], ['Train', 'Test', 'Validation']):
+        print(f"\n{'='*20} {name} Set: Univariate Analysis {'='*20}")
+        univariate_analysis(df, name)
+        print(f"\n{'='*20} {name} Set: Bivariate Analysis {'='*20}")
+        bivariate_analysis(df, name)
+        print(f"\n{'='*20} {name} Set: Multivariate Analysis {'='*20}")
+        multivariate_analysis(df, name)
+
+if __name__ == "__main__":
+    main()

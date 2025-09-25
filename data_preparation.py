@@ -4,18 +4,19 @@ Data Preparation for MedVidQA VideoRAG Pipeline.
 
 1. Load MedVidQA dataset.
 2. Download YouTube videos.
-3. Extract video frames and textual features (placeholders for InternVideo2 and BLIP-2).
+3. Clean dataset by removing entries with failed downloads.
 """
 
 import os
 import json
 from pytubefix import YouTube
 from pytubefix.cli import on_progress
-import cv2
 
-DATASET_DIR = "MedVidQA"
-VIDEO_DIR = "videos_train"
 CLEANED_DIR = "MedVidQA_cleaned"
+DATASET_DIR = "MedVidQA"
+VIDEO_TRAIN_DIR = "videos_train"
+VIDEO_TEST_DIR = "videos_test"
+VIDEO_VAL_DIR = "videos_val"
 
 def load_medvidqa_dataset(json_path):
     """Load MedVidQA dataset from JSON file."""
@@ -67,67 +68,23 @@ def clean_dataset(dataset, failed_ids):
     """Remove entries with failed video downloads."""
     return [entry for entry in dataset if entry.get("video_id") not in failed_ids]
 
-def extract_video_frames(video_path, frame_dir, interval=1):
-    """Extract frames from video at given interval (seconds)."""
-    os.makedirs(frame_dir, exist_ok=True)
-    vidcap = cv2.VideoCapture(video_path)
-    fps = vidcap.get(cv2.CAP_PROP_FPS)
-    count = 0
-    success, image = vidcap.read()
-    while success:
-        if int(count % (fps * interval)) == 0:
-            frame_path = os.path.join(frame_dir, f"frame_{count}.jpg")
-            cv2.imwrite(frame_path, image)
-        success, image = vidcap.read()
-        count += 1
-    vidcap.release()
+def main():
+    splits = ["train", "val", "test"]
+    video_dirs = {"train": VIDEO_TRAIN_DIR, "val": VIDEO_VAL_DIR, "test": VIDEO_TEST_DIR}
+    cleaned_data = {}
 
-def extract_textual_features(text):
-    """Placeholder for BLIP-2 or domain model feature extraction."""
-    # TODO: Replace with actual model inference
-    return [0.0] * 768  # Dummy embedding
-
-def extract_visual_features(frame_path):
-    """Placeholder for InternVideo2 or domain model feature extraction."""
-    # TODO: Replace with actual model inference
-    return [0.0] * 1024  # Dummy embedding
-
-if __name__ == "__main__":
-    train_json = os.path.join(DATASET_DIR, "train.json")
-    val_json = os.path.join(DATASET_DIR, "val.json")
-    test_json = os.path.join(DATASET_DIR, "test.json")
-    train_data = load_medvidqa_dataset(train_json)
-    val_data = load_medvidqa_dataset(val_json)
-    test_data = load_medvidqa_dataset(test_json)
-
-    train_video_map = get_unique_videos(train_data)
-    val_video_map = get_unique_videos(val_data)
-    test_video_map = get_unique_videos(test_data)
-
-    failed_train = download_unique_videos(train_video_map, VIDEO_DIR)
-    failed_val = download_unique_videos(val_video_map, "videos_val")
-    failed_test = download_unique_videos(test_video_map, "videos_test")
-
-    cleaned_train = clean_dataset(train_data, failed_train)
-    cleaned_val = clean_dataset(val_data, failed_val)
-    cleaned_test = clean_dataset(test_data, failed_test)
+    for split in splits:
+        json_path = os.path.join(DATASET_DIR, f"{split}.json")
+        data = load_medvidqa_dataset(json_path)
+        video_map = get_unique_videos(data)
+        failed_ids = download_unique_videos(video_map, video_dirs[split])
+        cleaned_data[split] = clean_dataset(data, failed_ids)
 
     os.makedirs(CLEANED_DIR, exist_ok=True)
-    with open(os.path.join(CLEANED_DIR, "train_cleaned.json"), "w") as f:
-        json.dump(cleaned_train, f, indent=2)
-    with open(os.path.join(CLEANED_DIR, "val_cleaned.json"), "w") as f:
-        json.dump(cleaned_val, f, indent=2)
-    with open(os.path.join(CLEANED_DIR, "test_cleaned.json"), "w") as f:
-        json.dump(cleaned_test, f, indent=2)
+    for split in splits:
+        out_path = os.path.join(CLEANED_DIR, f"{split}_cleaned.json")
+        with open(out_path, "w") as f:
+            json.dump(cleaned_data[split], f, indent=2)
 
-    # Extract frames and features (example for one video)
-    # for entry in cleaned_train[:1]:
-    #     video_id = entry["video_id"]
-    #     video_path = os.path.join(VIDEO_DIR, f"{video_id}.mp4")
-    #     frame_dir = os.path.join(VIDEO_DIR, f"{video_id}_frames")
-    #     extract_video_frames(video_path, frame_dir)
-    #     # Extract features (placeholder)
-    #     for frame_file in os.listdir(frame_dir):
-    #         frame_path = os.path.join(frame_dir, frame_file)
-    #         visual_feat = extract_visual_features(frame_path)
-    #     text_feat = extract_textual_features(entry.get("transcript", ""))
+if __name__ == "__main__":
+    main()
