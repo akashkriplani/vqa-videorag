@@ -13,12 +13,10 @@ import subprocess
 import tempfile
 import torch
 import numpy as np
-from transformers import AutoProcessor, AutoModelForSpeechSeq2Seq, pipeline as hf_pipeline
 from transformers import AutoTokenizer, AutoModel
 import open_clip
 import getpass
 import faiss
-import scispacy
 import spacy
 from scispacy.umls_linking import UmlsEntityLinker
 from PIL import Image
@@ -29,128 +27,10 @@ from dotenv import load_dotenv
 from huggingface_hub import login as hf_login
 from tqdm import tqdm  # <-- Add tqdm for progress bars
 # from google.colab import userdata
-from whisper_patch import get_whisper_pipeline_with_timestamps, get_whisper_pipeline_with_timestamps_simple
-import time
+from whisper_patch import get_whisper_pipeline_with_timestamps_simple
+from embedding_storage import save_video_features, save_faiss_indices_from_lists
 
 # Top-level function for multiprocessing
-
-# Full pipeline worker for parallel processing
-def process_video_parallel(fname, video_dir, text_feat_dir, visual_feat_dir, asr_model_id):
-    if not fname.endswith('.mp4'):
-        return None, None, fname, 'Not an mp4 file'
-    video_id = os.path.splitext(fname)[0]
-    video_path = os.path.join(video_dir, fname)
-    text_json_path = os.path.join(text_feat_dir, f"{video_id}.json")
-    visual_json_path = os.path.join(visual_feat_dir, f"{video_id}.json")
-    # Skip if both text and visual json files exist
-    if os.path.exists(text_json_path) and os.path.exists(visual_json_path):
-        return None, None, fname, 'JSONs already exist'
-    try:
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-        elif torch.backends.mps.is_available():
-            torch.mps.empty_cache()
-        gc.collect()
-        transcript_chunks = transcribe_with_asr(video_path, asr_model_id)
-        nlp, bert_tokenizer, bert_model = load_ner_and_embed_models()
-        text_results = extract_entities_and_embed(transcript_chunks, nlp, bert_tokenizer, bert_model)
-        text_results_serializable = []
-        for r in text_results:
-            r_copy = r.copy()
-            if isinstance(r_copy.get('embedding'), np.ndarray):
-                r_copy['embedding'] = r_copy['embedding'].tolist()
-            text_results_serializable.append(r_copy)
-        with open(text_json_path, 'w') as f:
-            json.dump(text_results_serializable, f)
-        text_embs = [r['embedding'] for r in text_results]
-        text_meta = [{"video_id": video_id, **r} for r in text_results]
-        visual_results = extract_frames_and_embed(video_path, text_results)
-        visual_results_serializable = []
-        for r in visual_results:
-            r_copy = r.copy()
-            if isinstance(r_copy.get('embedding'), np.ndarray):
-                r_copy['embedding'] = r_copy['embedding'].tolist()
-            visual_results_serializable.append(r_copy)
-        with open(visual_json_path, 'w') as f:
-            json.dump(visual_results_serializable, f)
-        visual_embs = [r['embedding'] for r in visual_results]
-        visual_meta = [{"video_id": video_id, **r} for r in visual_results]
-        return (text_embs, text_meta), (visual_embs, visual_meta), fname, None
-    except Exception as e:
-        return None, None, fname, str(e)
-
-
-def process_video_batch(batch_fnames, video_dir, text_feat_dir, visual_feat_dir, asr_model_id):
-    batch_results = {}
-    for fname in batch_fnames:
-        if not fname.endswith('.mp4'):
-            batch_results[fname] = (None, None, 'Not an mp4 file')
-            continue
-        video_id = os.path.splitext(fname)[0]
-        video_path = os.path.join(video_dir, fname)
-        text_json_path = os.path.join(text_feat_dir, f"{video_id}.json")
-        visual_json_path = os.path.join(visual_feat_dir, f"{video_id}.json")
-        if os.path.exists(text_json_path) and os.path.exists(visual_json_path):
-            batch_results[fname] = (None, None, 'JSONs already exist')
-            continue
-        try:
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-            elif torch.backends.mps.is_available():
-                torch.mps.empty_cache()
-            gc.collect()
-            transcript_chunks = transcribe_with_asr(video_path, asr_model_id)
-            nlp, bert_tokenizer, bert_model = load_ner_and_embed_models()
-            text_results = extract_entities_and_embed(transcript_chunks, nlp, bert_tokenizer, bert_model)
-            text_results_serializable = []
-            for r in text_results:
-                r_copy = r.copy()
-                if isinstance(r_copy.get('embedding'), np.ndarray):
-                    r_copy['embedding'] = r_copy['embedding'].tolist()
-                text_results_serializable.append(r_copy)
-            with open(text_json_path, 'w') as f:
-                json.dump(text_results_serializable, f)
-            text_embs = [r['embedding'] for r in text_results]
-            text_meta = [{"video_id": video_id, **r} for r in text_results]
-            visual_results = extract_frames_and_embed(video_path, text_results)
-            visual_results_serializable = []
-            for r in visual_results:
-                r_copy = r.copy()
-                if isinstance(r_copy.get('embedding'), np.ndarray):
-                    r_copy['embedding'] = r_copy['embedding'].tolist()
-                visual_results_serializable.append(r_copy)
-            with open(visual_json_path, 'w') as f:
-                json.dump(visual_results_serializable, f)
-            visual_embs = [r['embedding'] for r in visual_results]
-            visual_meta = [{"video_id": video_id, **r} for r in visual_results]
-            batch_results[fname] = ((text_embs, text_meta), (visual_embs, visual_meta), None)
-        except Exception as e:
-            batch_results[fname] = (None, None, str(e))
-    return batch_results
-
-def parallel_process_videos(fnames, video_dir, text_feat_dir, visual_feat_dir, asr_model_id="openai/whisper-tiny", batch_size=1, max_workers=2):
-    """
-    Full pipeline parallel processing with batching: ASR, NER, embedding, JSON saving.
-    """
-    # Split fnames into batches
-    batches = [fnames[i:i+batch_size] for i in range(0, len(fnames), batch_size)]
-    results = {}
-    total = len(fnames)
-    processed = 0
-    with ProcessPoolExecutor(max_workers=max_workers) as executor:
-        futures = {executor.submit(process_video_batch, batch, video_dir, text_feat_dir, visual_feat_dir, asr_model_id): tuple(batch) for batch in batches}
-        for fut in as_completed(futures):
-            batch_result = fut.result()
-            for fname, (text, visual, error) in batch_result.items():
-                processed += 1
-                if error == 'JSONs already exist':
-                    print(f"[SKIP] {fname}: {error} | Progress: {processed}/{total} videos processed.")
-                elif error:
-                    print(f"[ERROR] {fname}: {error} | Progress: {processed}/{total} videos processed.")
-                else:
-                    print(f"[DONE] {fname} | Progress: {processed}/{total} videos processed.")
-                results[fname] = (text, visual)
-    return results
 
 # Parallel processing flag
 ENABLE_PARALLEL = True  # Set to False to disable parallel processing
@@ -180,8 +60,6 @@ if HF_TOKEN is None:
         print("Warning: Could not login to HuggingFace. If you get a 401 error, set HF_TOKEN env variable or login manually.")
 else:
     hf_login(HF_TOKEN)
-
-os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
 # 1. ASR with United-MedASR
 
@@ -265,6 +143,90 @@ def extract_frames_and_embed(video_path, entities, window=1.0, model_id='hf-hub:
             results.append({"timestamp": ts, "frame_path": "in-memory", "embedding": emb})
 
     cap.release()
+    return results
+
+def process_video_batch(batch_fnames, video_dir, text_feat_dir, visual_feat_dir, asr_model_id):
+    batch_results = {}
+    for fname in batch_fnames:
+        if not fname.endswith('.mp4'):
+            batch_results[fname] = (None, None, 'Not an mp4 file')
+            continue
+        video_id = os.path.splitext(fname)[0]
+        video_path = os.path.join(video_dir, fname)
+        text_json_path = os.path.join(text_feat_dir, f"{video_id}.json")
+        visual_json_path = os.path.join(visual_feat_dir, f"{video_id}.json")
+        # If JSON feature files already exist, load embeddings + metadata and return them
+        try:
+            text_embs, text_meta = None, None
+            visual_embs, visual_meta = None, None
+            if os.path.exists(text_json_path):
+                with open(text_json_path, 'r') as f:
+                    text_json = json.load(f)
+                # Reconstruct embeddings and metadata
+                text_embs = [np.array(r['embedding']) if isinstance(r.get('embedding'), list) else np.array(r.get('embedding')) for r in text_json]
+                text_meta = [{"video_id": video_id, **{k: v for k, v in r.items() if k != 'embedding'}} for r in text_json]
+            if os.path.exists(visual_json_path):
+                with open(visual_json_path, 'r') as f:
+                    visual_json = json.load(f)
+                visual_embs = [np.array(r['embedding']) if isinstance(r.get('embedding'), list) else np.array(r.get('embedding')) for r in visual_json]
+                visual_meta = [{"video_id": video_id, **{k: v for k, v in r.items() if k != 'embedding'}} for r in visual_json]
+
+            if text_embs is not None or visual_embs is not None:
+                # Normalize output shape to match the usual (text, visual, error) tuple structure
+                text_tuple = (text_embs, text_meta) if text_embs is not None else (None, None)
+                visual_tuple = (visual_embs, visual_meta) if visual_embs is not None else (None, None)
+                batch_results[fname] = (text_tuple, visual_tuple, None)
+                continue
+        except Exception as e:
+            # If existing JSONs are corrupt/unreadable, return an error for this file and continue
+            batch_results[fname] = (None, None, f"Failed to load existing JSONs: {e}")
+            continue
+        try:
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            elif torch.backends.mps.is_available():
+                torch.mps.empty_cache()
+            gc.collect()
+            transcript_chunks = transcribe_with_asr(video_path, asr_model_id)
+            nlp, bert_tokenizer, bert_model = load_ner_and_embed_models()
+            text_results = extract_entities_and_embed(transcript_chunks, nlp, bert_tokenizer, bert_model)
+            visual_results = extract_frames_and_embed(video_path, text_results)
+            # Delegate saving to embedding_storage
+            try:
+                save_video_features(video_id, text_results, visual_results, text_feat_dir, visual_feat_dir)
+            except Exception:
+                pass
+            text_embs = [r['embedding'] for r in text_results]
+            text_meta = [{"video_id": video_id, **r} for r in text_results]
+            visual_embs = [r['embedding'] for r in visual_results]
+            visual_meta = [{"video_id": video_id, **r} for r in visual_results]
+            batch_results[fname] = ((text_embs, text_meta), (visual_embs, visual_meta), None)
+        except Exception as e:
+            batch_results[fname] = (None, None, str(e))
+    return batch_results
+
+def parallel_process_videos(fnames, video_dir, text_feat_dir, visual_feat_dir, asr_model_id="openai/whisper-tiny", batch_size=1, max_workers=2):
+    """
+    Full pipeline parallel processing with batching: ASR, NER, embedding, JSON saving.
+    """
+    # Split fnames into batches
+    batches = [fnames[i:i+batch_size] for i in range(0, len(fnames), batch_size)]
+    results = {}
+    total = len(fnames)
+    processed = 0
+    with ProcessPoolExecutor(max_workers=max_workers) as executor:
+        futures = {executor.submit(process_video_batch, batch, video_dir, text_feat_dir, visual_feat_dir, asr_model_id): tuple(batch) for batch in batches}
+        for fut in as_completed(futures):
+            batch_result = fut.result()
+            for fname, (text, visual, error) in batch_result.items():
+                processed += 1
+                if error == 'JSONs already exist':
+                    print(f"[SKIP] {fname}: {error} | Progress: {processed}/{total} videos processed.")
+                elif error:
+                    print(f"[ERROR] {fname}: {error} | Progress: {processed}/{total} videos processed.")
+                else:
+                    print(f"[DONE] {fname} | Progress: {processed}/{total} videos processed.")
+                results[fname] = (text, visual)
     return results
 
 # 4. FAISS database integration
@@ -373,12 +335,16 @@ def process_split(split, video_dir, text_feat_dir, visual_feat_dir, faiss_text_p
         results = parallel_process_videos(fnames, video_dir, text_feat_dir, visual_feat_dir, batch_size=batch_size, max_workers=max_workers)
         for fname in fnames:
             text, visual = results.get(fname, (None, None))
-            if text:
+            if text is not None:
                 all_text_embs.extend(text[0])
                 all_text_meta.extend(text[1])
-            if visual:
-                all_visual_embs.extend(visual[0])
-                all_visual_meta.extend(visual[1])
+            if visual is not None:
+                if visual[0] is None:
+                    print(f"[WARNING] Visual embeddings for {fname} are None.")
+                    continue
+                else:
+                    all_visual_embs.extend(visual[0])
+                    all_visual_meta.extend(visual[1])
             # Free up memory
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
@@ -398,17 +364,21 @@ def process_split(split, video_dir, text_feat_dir, visual_feat_dir, faiss_text_p
                 all_visual_meta.extend(visual[1])
             done += 1
             print(f"Progress: {done}/{total} videos processed.")
-    # Save to FAISS
-    if all_text_embs:
-        print("Saving text embeddings to FAISS...")
-        text_db = FaissDB(dim=len(all_text_embs[0]), index_path=faiss_text_path)
-        text_db.add(all_text_embs, all_text_meta)
-        text_db.save()
-    if all_visual_embs:
-        print("Saving visual embeddings to FAISS...")
-        visual_db = FaissDB(dim=len(all_visual_embs[0]), index_path=faiss_visual_path)
-        visual_db.add(all_visual_embs, all_visual_meta)
-        visual_db.save()
+    # Delegate FAISS index building / saving to embedding_storage
+    try:
+        save_faiss_indices_from_lists(all_text_embs, all_text_meta, all_visual_embs, all_visual_meta, faiss_text_path, faiss_visual_path)
+    except Exception:
+        # Fallback: try previous logic if the helper fails
+        if all_text_embs:
+            print("Saving text embeddings to FAISS (fallback)...")
+            text_db = FaissDB(dim=len(all_text_embs[0]), index_path=faiss_text_path)
+            text_db.add(all_text_embs, all_text_meta)
+            text_db.save()
+        if all_visual_embs:
+            print("Saving visual embeddings to FAISS (fallback)...")
+            visual_db = FaissDB(dim=len(all_visual_embs[0]), index_path=faiss_visual_path)
+            visual_db.add(all_visual_embs, all_visual_meta)
+            visual_db.save()
     print(f"Done processing split: {split}")
 
 def test_single_video(video_path, text_feat_dir, visual_feat_dir):
@@ -434,12 +404,12 @@ def main():
   for split, video_dir in splits:
       print(f"Processing split: {split}")
       process_split(
-          split,
-          video_dir,
-          f"feature_extraction/textual/{split}",
-          f"feature_extraction/visual/{split}",
-          f"faiss_db/textual_{split}.index",
-          f"faiss_db/visual_{split}.index"
+          split=split,
+          video_dir=video_dir,
+          text_feat_dir=f"feature_extraction/textual/{split}",
+          visual_feat_dir=f"feature_extraction/visual/{split}",
+          faiss_text_path=f"faiss_db/textual_{split}.index",
+          faiss_visual_path=f"faiss_db/visual_{split}.index"
       )
 
 if __name__ == "__main__":
