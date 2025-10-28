@@ -335,16 +335,12 @@ def process_split(split, video_dir, text_feat_dir, visual_feat_dir, faiss_text_p
         results = parallel_process_videos(fnames, video_dir, text_feat_dir, visual_feat_dir, batch_size=batch_size, max_workers=max_workers)
         for fname in fnames:
             text, visual = results.get(fname, (None, None))
-            if text is not None:
+            if text and all(item is not None for item in text):
                 all_text_embs.extend(text[0])
                 all_text_meta.extend(text[1])
-            if visual is not None:
-                if visual[0] is None:
-                    print(f"[WARNING] Visual embeddings for {fname} are None.")
-                    continue
-                else:
-                    all_visual_embs.extend(visual[0])
-                    all_visual_meta.extend(visual[1])
+            if visual and all(item is not None for item in visual):
+                all_visual_embs.extend(visual[0])
+                all_visual_meta.extend(visual[1])
             # Free up memory
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
