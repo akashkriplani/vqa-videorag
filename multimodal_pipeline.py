@@ -29,6 +29,7 @@ from tqdm import tqdm  # <-- Add tqdm for progress bars
 # from google.colab import userdata
 from whisper_patch import get_whisper_pipeline_with_timestamps_simple
 from embedding_storage import save_video_features, save_faiss_indices_from_lists
+from data_preparation import filter_json_by_embeddings
 
 # Top-level function for multiprocessing
 
@@ -407,6 +408,10 @@ def main():
           faiss_text_path=f"faiss_db/textual_{split}.index",
           faiss_visual_path=f"faiss_db/visual_{split}.index"
       )
+
+  # After all splits are processed, filter JSON files based on available embeddings
+  print("\nFiltering JSON files to keep only entries with both textual and visual embeddings...")
+  filter_json_by_embeddings()
 
 if __name__ == "__main__":
     main()

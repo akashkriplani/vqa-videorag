@@ -68,6 +68,39 @@ def clean_dataset(dataset, failed_ids):
     """Remove entries with failed video downloads."""
     return [entry for entry in dataset if entry.get("video_id") not in failed_ids]
 
+def filter_by_embeddings(dataset, split):
+    """Keep only entries for which both textual and visual embeddings exist."""
+    base_dir = os.path.join("feature_extraction")
+    textual_dir = os.path.join(base_dir, "textual", split)
+    visual_dir = os.path.join(base_dir, "visual", split)
+    # Get set of video_ids for which both textual and visual embedding files exist
+    textual_ids = set()
+    visual_ids = set()
+    if os.path.exists(textual_dir):
+        for fname in os.listdir(textual_dir):
+            if fname.endswith(".json"):
+                vid = fname.split(".")[0]
+                textual_ids.add(vid)
+    if os.path.exists(visual_dir):
+        for fname in os.listdir(visual_dir):
+            if fname.endswith(".json"):
+                vid = fname.split(".")[0]
+                visual_ids.add(vid)
+    valid_ids = textual_ids & visual_ids
+    # Only keep entries whose video_id is in valid_ids
+    return [entry for entry in dataset if entry.get("video_id") in valid_ids]
+
+def filter_json_by_embeddings():
+    """Filter dataset JSON files to keep only entries with both textual and visual embeddings."""
+    for split in ['train', 'val', 'test']:
+        cleaned_path = os.path.join(CLEANED_DIR, f"{split}_cleaned.json")
+        with open(cleaned_path, "r") as f:
+            data = json.load(f)
+            filtered = filter_by_embeddings(data, split)
+            out_path = os.path.join(CLEANED_DIR, f"{split}_cleaned.json")
+            with open(out_path, "w") as out_f:
+                json.dump(filtered, out_f, indent=2)
+
 def main():
     splits = ["train", "val", "test"]
     video_dirs = {"train": VIDEO_TRAIN_DIR, "val": VIDEO_VAL_DIR, "test": VIDEO_TEST_DIR}
