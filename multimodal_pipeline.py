@@ -411,7 +411,7 @@ def main():
 
   # After all splits are processed, filter JSON files based on available embeddings
   print("\nFiltering JSON files to keep only entries with both textual and visual embeddings...")
-  filter_json_by_embeddings()
+  filter_json_by_embeddings(model_name="openai/whisper-tiny")
 
 if __name__ == "__main__":
     main()

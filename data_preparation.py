@@ -9,6 +9,7 @@ Data Preparation for MedVidQA VideoRAG Pipeline.
 
 import os
 import json
+import re
 from pytubefix import YouTube
 from pytubefix.cli import on_progress
 
@@ -68,9 +69,36 @@ def clean_dataset(dataset, failed_ids):
     """Remove entries with failed video downloads."""
     return [entry for entry in dataset if entry.get("video_id") not in failed_ids]
 
-def filter_by_embeddings(dataset, split):
-    """Keep only entries for which both textual and visual embeddings exist."""
-    base_dir = os.path.join("feature_extraction")
+def filter_by_embeddings(dataset, split, model_name=None):
+    """Keep only entries for which both textual and visual embeddings exist.
+
+    If `model_name` is provided, prefer directories named
+    `feature_extraction_{sanitized_model}` (for example
+    `feature_extraction_openai_whisper_small`). Falls back to
+    the default `feature_extraction` directory when the model-specific
+    directory does not exist.
+    """
+    # sanitize model name to a filesystem-friendly suffix (replace
+    # non-alphanumeric characters with underscore)
+    model_suffix = None
+    if model_name:
+        model_suffix = re.sub(r"[^A-Za-z0-9]+", "_", model_name)
+
+    # prefer model-specific feature extraction dir when present
+    candidate_base_dirs = []
+    if model_suffix:
+        candidate_base_dirs.append(f"feature_extraction_{model_suffix}")
+    candidate_base_dirs.append("feature_extraction")
+
+    base_dir = None
+    for cand in candidate_base_dirs:
+        if os.path.exists(cand):
+            base_dir = cand
+            break
+    # if none exists, keep using the default name (will result in empty sets)
+    if base_dir is None:
+        base_dir = "feature_extraction"
+
     textual_dir = os.path.join(base_dir, "textual", split)
     visual_dir = os.path.join(base_dir, "visual", split)
     # Get set of video_ids for which both textual and visual embedding files exist
@@ -90,16 +118,34 @@ def filter_by_embeddings(dataset, split):
     # Only keep entries whose video_id is in valid_ids
     return [entry for entry in dataset if entry.get("video_id") in valid_ids]
 
-def filter_json_by_embeddings():
-    """Filter dataset JSON files to keep only entries with both textual and visual embeddings."""
+def _sanitize_for_filename(s: str) -> str:
+    """Create a filesystem-safe string from a model name for filenames.
+
+    Example: 'openai/whisper-small' -> 'openai_whisper_small'
+    """
+    return re.sub(r"[^A-Za-z0-9]+", "_", s)
+
+
+def filter_json_by_embeddings(model_name: str):
+    """Filter dataset JSON files to keep only entries with both textual and visual embeddings.
+
+    Writes new cleaned files in `CLEANED_DIR` named like
+    `{split}_{sanitized_model}_cleaned.json`.
+    """
+    sanitized = _sanitize_for_filename(model_name)
+    os.makedirs(CLEANED_DIR, exist_ok=True)
     for split in ['train', 'val', 'test']:
         cleaned_path = os.path.join(CLEANED_DIR, f"{split}_cleaned.json")
+        if not os.path.exists(cleaned_path):
+            print(f"Warning: base cleaned file not found: {cleaned_path}. Skipping {split}.")
+            continue
         with open(cleaned_path, "r") as f:
             data = json.load(f)
-            filtered = filter_by_embeddings(data, split)
-            out_path = os.path.join(CLEANED_DIR, f"{split}_cleaned.json")
-            with open(out_path, "w") as out_f:
-                json.dump(filtered, out_f, indent=2)
+        filtered = filter_by_embeddings(data, split, model_name=model_name)
+        out_path = os.path.join(CLEANED_DIR, f"{split}_{sanitized}_cleaned.json")
+        with open(out_path, "w") as out_f:
+            json.dump(filtered, out_f, indent=2)
+        print(f"Wrote filtered file: {out_path} ({len(filtered)} entries)")
 
 def main():
     splits = ["train", "val", "test"]
