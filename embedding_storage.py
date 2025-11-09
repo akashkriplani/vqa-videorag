@@ -68,8 +68,35 @@ class FaissDBSimple:
         if parent_dir:
             os.makedirs(parent_dir, exist_ok=True)
         faiss.write_index(self.index, self.index_path)
+
+        # Convert all NumPy arrays inside the metadata to lists
+        sanitized_metadata = []
+        for item in self.metadata:
+            sanitized_item = item.copy()
+            if 'embedding' in sanitized_item and isinstance(sanitized_item['embedding'], np.ndarray):
+                sanitized_item['embedding'] = sanitized_item['embedding'].tolist()
+            sanitized_metadata.append(sanitized_item)
+
         with open(self.index_path + ".meta.json", "w") as f:
-            json.dump(self.metadata, f)
+            json.dump(sanitized_metadata, f)
+
+    def search(self, query_vec, top_k=5):
+        # query_vec should be 1D numpy array
+        q = query_vec.astype(np.float32)
+        # normalize as the pipeline used normalized vectors
+        norm = np.linalg.norm(q)
+        if norm == 0:
+            raise ValueError("Query vector has zero norm.")
+        q = q / norm
+        D, I = self.index.search(q.reshape(1, -1), top_k)
+        results = []
+        for dist, idx in zip(D[0], I[0]):
+            if idx < 0 or idx >= len(self.metadata):
+                results.append({"score": float(dist), "meta": None})
+            else:
+                results.append({"score": float(dist), "meta": self.metadata[idx]})
+
+        return sorted(results, key=lambda x: x["score"], reverse=True)
 
 
 def save_faiss_indices_from_lists(all_text_embs, all_text_meta, all_visual_embs, all_visual_meta, faiss_text_path, faiss_visual_path):

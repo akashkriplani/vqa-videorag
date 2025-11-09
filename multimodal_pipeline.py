@@ -28,7 +28,7 @@ from huggingface_hub import login as hf_login
 from tqdm import tqdm  # <-- Add tqdm for progress bars
 # from google.colab import userdata
 from whisper_patch import get_whisper_pipeline_with_timestamps_simple
-from embedding_storage import save_video_features, save_faiss_indices_from_lists
+from embedding_storage import FaissDBSimple, save_video_features, save_faiss_indices_from_lists
 from data_preparation import filter_json_by_embeddings
 
 # Top-level function for multiprocessing
@@ -269,52 +269,88 @@ def parallel_process_videos(fnames, video_dir, text_feat_dir, visual_feat_dir, a
     return results
 
 # 4. FAISS database integration
-class FaissDB:
-    def __init__(self, dim, index_path):
-        self.index = faiss.IndexFlatL2(dim)
-        self.index_path = index_path
-        self.metadata = []
-    def add(self, embeddings, metadata):
-        embeddings = np.stack([e/np.linalg.norm(e) for e in embeddings])
-        self.index.add(embeddings)
-        self.metadata.extend(metadata)
-    def save(self):
-        faiss.write_index(self.index, self.index_path)
-        with open(self.index_path + ".meta.json", "w") as f:
-            json.dump(self.metadata, f)
-    def load(self):
-        self.index = faiss.read_index(self.index_path)
-        with open(self.index_path + ".meta.json", "r") as f:
-            self.metadata = json.load(f)
-    def query(self, query_emb, top_k=5):
-        query_emb = query_emb / np.linalg.norm(query_emb)
-        D, I = self.index.search(query_emb[None, :], top_k)
-        return [self.metadata[i] for i in I[0]]
+# class FaissDB:
+#     def __init__(self, dim, index_path):
+#         self.index = faiss.IndexFlatL2(dim)
+#         self.index_path = index_path
+#         self.metadata = []
+#     def add(self, embeddings, metadata):
+#         embeddings = np.stack([e/np.linalg.norm(e) for e in embeddings])
+#         self.index.add(embeddings)
+#         self.metadata.extend(metadata)
+#     def save(self):
+#         faiss.write_index(self.index, self.index_path)
+#         with open(self.index_path + ".meta.json", "w") as f:
+#             json.dump(self.metadata, f)
+#     def load(self):
+#         self.index = faiss.read_index(self.index_path)
+#         with open(self.index_path + ".meta.json", "r") as f:
+#             self.metadata = json.load(f)
+#     def query(self, query_emb, top_k=5):
+#         query_emb = query_emb / np.linalg.norm(query_emb)
+#         D, I = self.index.search(query_emb[None, :], top_k)
+#         return [self.metadata[i] for i in I[0]]
 
 # 5. Demo pipeline
 
-def demo_pipeline(video_path, faiss_text_path, faiss_visual_path):
+def demo_pipeline(video_path, text_feat_dir, visual_feat_dir, faiss_text_path, faiss_visual_path):
+    os.makedirs(text_feat_dir, exist_ok=True)
+    os.makedirs(visual_feat_dir, exist_ok=True)
+
+    fname = os.path.basename(video_path)
+    video_dir = os.path.dirname(video_path)
+
+    if not fname.endswith('.mp4'):
+        return None, None
+
+    video_id = os.path.splitext(fname)[0]
+    video_path = os.path.join(video_dir, fname)
+    text_json_path = os.path.join(text_feat_dir, f"{video_id}.json")
+    visual_json_path = os.path.join(visual_feat_dir, f"{video_id}.json")
+
     # ASR
     transcript_chunks = transcribe_with_asr(video_path)
+
     # NER + text embedding
     nlp, bert_tokenizer, bert_model = load_ner_and_embed_models()
     text_results = extract_entities_and_embed(transcript_chunks, nlp, bert_tokenizer, bert_model)
+    # Convert embeddings to lists for JSON serialization
+    # Save textual features to JSON
+    text_results_serializable = []
+    for r in text_results:
+        r_copy = r.copy()
+        if isinstance(r_copy.get('embedding'), np.ndarray):
+            r_copy['embedding'] = r_copy['embedding'].tolist()
+        text_results_serializable.append(r_copy)
+    with open(text_json_path, 'w') as f:
+        json.dump(text_results_serializable, f)
+
     # Visual embedding
     visual_results = extract_frames_and_embed(video_path, text_results)
+    # Convert embeddings to lists for JSON serialization
+    # Save visual features to JSON
+    visual_results_serializable = []
+    for r in visual_results:
+        r_copy = r.copy()
+        if isinstance(r_copy.get('embedding'), np.ndarray):
+            r_copy['embedding'] = r_copy['embedding'].tolist()
+        visual_results_serializable.append(r_copy)
+    with open(visual_json_path, 'w') as f:
+        json.dump(visual_results_serializable, f)
     # Save to FAISS
-    text_db = FaissDB(dim=text_results[0]['embedding'].shape[0], index_path=faiss_text_path)
-    visual_db = FaissDB(dim=visual_results[0]['embedding'].shape[0], index_path=faiss_visual_path)
+    text_db = FaissDBSimple(dim=text_results[0]['embedding'].shape[0], index_path=faiss_text_path)
+    visual_db = FaissDBSimple(dim=visual_results[0]['embedding'].shape[0], index_path=faiss_visual_path)
     text_db.add([r['embedding'] for r in text_results], text_results)
     visual_db.add([r['embedding'] for r in visual_results], visual_results)
     text_db.save()
     visual_db.save()
     print("Databases saved.")
     # Query demo
-    query = "laparoscopic surgery"
+    query = "How to do a mouth cancer check at home?"
     inputs = bert_tokenizer(query, return_tensors="pt")
     with torch.no_grad():
         query_emb = bert_model(**inputs).last_hidden_state.mean(dim=1).squeeze().cpu().numpy()
-    print("Text DB results:", text_db.query(query_emb, top_k=3))
+    print("Text DB results:", text_db.search(query_emb, top_k=3))
 
 def process_video(fname, video_dir, text_feat_dir, visual_feat_dir):
     if not fname.endswith('.mp4'):
@@ -406,12 +442,12 @@ def process_split(split, video_dir, text_feat_dir, visual_feat_dir, faiss_text_p
         # Fallback: try previous logic if the helper fails
         if all_text_embs:
             print("Saving text embeddings to FAISS (fallback)...")
-            text_db = FaissDB(dim=len(all_text_embs[0]), index_path=faiss_text_path)
+            text_db = FaissDBSimple(dim=len(all_text_embs[0]), index_path=faiss_text_path)
             text_db.add(all_text_embs, all_text_meta)
             text_db.save()
         if all_visual_embs:
             print("Saving visual embeddings to FAISS (fallback)...")
-            visual_db = FaissDB(dim=len(all_visual_embs[0]), index_path=faiss_visual_path)
+            visual_db = FaissDBSimple(dim=len(all_visual_embs[0]), index_path=faiss_visual_path)
             visual_db.add(all_visual_embs, all_visual_meta)
             visual_db.save()
     print(f"Done processing split: {split}")
@@ -429,7 +465,15 @@ def main():
   # Test mode for a single video
   # test_single_video("videos_train/_6csIJAWj_s.mp4", "feature_extraction/textual/test_single", "feature_extraction/visual/test_single")
 
-  # Uncomment above and set your video path to test single video
+    # Test demo pipeline
+    # demo_pipeline(
+    #     video_path="videos_train/_6csIJAWj_s.mp4",
+    #     text_feat_dir="feature_extraction/textual/demo",
+    #     visual_feat_dir="feature_extraction/visual/demo",
+    #     faiss_text_path="faiss_db/textual_demo.index",
+    #     faiss_visual_path="faiss_db/visual_demo.index")
+
+  # Uncomment above and set your video path to test single video or run a demo pipeline
   splits = [
     ("train", "videos_train"),
     ("val", "videos_val"),
