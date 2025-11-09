@@ -217,6 +217,8 @@ videos_val/*
 EDA/*
 
 feature_extraction/*
+feature_extraction_openai_whisper_tiny/*
 feature_extraction_openai_whisper_small/*
 
 faiss_db/*
+faiss_db_openai_whisper_tiny/*

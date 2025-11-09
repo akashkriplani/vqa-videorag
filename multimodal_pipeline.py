@@ -97,25 +97,52 @@ def load_ner_and_embed_models():
     bert_model = AutoModel.from_pretrained("emilyalsentzer/Bio_ClinicalBERT")
     return nlp, bert_tokenizer, bert_model
 
-def extract_entities_and_embed(transcript_chunks, nlp, bert_tokenizer, bert_model):
+def extract_entities_and_embed(transcript_chunks, nlp, bert_tokenizer, bert_model, overlap_tokens=30):
     results = []
+    previous_text = ""
+
     for chunk in transcript_chunks:
         text = chunk['text']
         ts = chunk['timestamp']
+
         if ENABLE_NER and nlp is not None:
             doc = nlp(text)
             entities = [(ent.text, ent._.umls_ents) for ent in doc.ents]
         else:
             entities = []
-        inputs = bert_tokenizer(text, return_tensors="pt", truncation=True, max_length=128)
+
+        # Token-aware overlap: get last `overlap_tokens` token ids from previous_text
+        if previous_text:
+            prev_ids = bert_tokenizer.encode(previous_text, add_special_tokens=False)
+            overlap_ids = prev_ids[-overlap_tokens:] if len(prev_ids) > 0 else []
+            overlap_text = bert_tokenizer.decode(overlap_ids, clean_up_tokenization_spaces=True) if overlap_ids else ""
+        else:
+            overlap_text = ""
+
+        overlapped_text = (overlap_text + " " + text).strip()
+        previous_text = text
+
+        # Process with overlap
+        inputs = bert_tokenizer(overlapped_text, return_tensors="pt",
+                              truncation=True, max_length=(128 + overlap_tokens))
+
         with torch.no_grad():
             emb = bert_model(**inputs).last_hidden_state.mean(dim=1).squeeze().cpu().numpy()
-        results.append({"timestamp": ts, "text": text, "entities": entities, "embedding": emb})
+
+        # Save both original chunk text and the actual input used for embedding
+        results.append({
+            "timestamp": ts,
+            "text": text,
+            "input_text": overlapped_text,
+            "entities": entities,
+            "embedding": emb
+        })
+
     return results
 
 # 3. Frame extraction & visual embeddings
 
-def extract_frames_and_embed(video_path, entities, window=1.0, model_id='hf-hub:microsoft/BiomedCLIP-PubMedBERT_256-vit_base_patch16_224'):
+def extract_frames_and_embed(video_path, entities, window=1.0, model_id='hf-hub:microsoft/BiomedCLIP-PubMedBERT_256-vit_base_patch16_224', overlap_frames=3):
     model, _, preprocess_val = open_clip.create_model_and_transforms(model_id)
     cap = cv2.VideoCapture(video_path)
     fps = cap.get(cv2.CAP_PROP_FPS)
@@ -124,24 +151,35 @@ def extract_frames_and_embed(video_path, entities, window=1.0, model_id='hf-hub:
     print(f"Extracting frames and visual embeddings: {video_path}")
     for ent in tqdm(entities, desc="Frame extraction", unit="frame"):
         ts = ent['timestamp']
-        frame_idx = int(float(ts[0]) * fps) # Assuming timestamp is a tuple (start, end)
-        cap.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
-        ret, frame = cap.read()
+        base_frame_idx = int(float(ts[0]) * fps) # Assuming timestamp is a tuple (start, end)
 
-        if not ret:
-            continue
+        # Extract multiple frames around the timestamp with overlap
+        frame_indices = [
+            max(0, base_frame_idx - i) for i in range(overlap_frames//2, -overlap_frames//2, -1)
+        ]
 
-        # Use a managed temporary file
-        with tempfile.NamedTemporaryFile(suffix='.jpg', delete=True) as tmp_img:
-            cv2.imwrite(tmp_img.name, frame)
-            image = Image.open(tmp_img.name).convert('RGB')
-            image_tensor = preprocess_val(image).unsqueeze(0)
+        embeddings = []
+        for frame_idx in frame_indices:
+            cap.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
+            ret, frame = cap.read()
+            if not ret:
+                continue
 
-            with torch.no_grad():
-                emb = model.encode_image(image_tensor).squeeze().cpu().numpy()
-
+            # Use a managed temporary file
             # Note: The temp file is deleted upon exiting the 'with' block
-            results.append({"timestamp": ts, "frame_path": "in-memory", "embedding": emb})
+            with tempfile.NamedTemporaryFile(suffix='.jpg', delete=True) as tmp_img:
+                cv2.imwrite(tmp_img.name, frame)
+                image = Image.open(tmp_img.name).convert('RGB')
+                image_tensor = preprocess_val(image).unsqueeze(0)
+
+                with torch.no_grad():
+                    emb = model.encode_image(image_tensor).squeeze().cpu().numpy()
+                embeddings.append(emb)
+
+        # Average the embeddings from overlapping frames
+        if embeddings:
+            final_emb = np.mean(embeddings, axis=0)
+            results.append({"timestamp": ts, "frame_path": "in-memory", "embedding": final_emb})
 
     cap.release()
     return results
@@ -379,11 +417,10 @@ def process_split(split, video_dir, text_feat_dir, visual_feat_dir, faiss_text_p
     print(f"Done processing split: {split}")
 
 def test_single_video(video_path, text_feat_dir, visual_feat_dir):
-    nlp, bert_tokenizer, bert_model = load_ner_and_embed_models()
     os.makedirs(text_feat_dir, exist_ok=True)
     os.makedirs(visual_feat_dir, exist_ok=True)
     fname = os.path.basename(video_path)
-    (text_embs, text_meta), (visual_embs, visual_meta) = process_video(fname, os.path.dirname(video_path), text_feat_dir, visual_feat_dir, nlp, bert_tokenizer, bert_model)
+    (text_embs, text_meta), (visual_embs, visual_meta) = process_video(fname, os.path.dirname(video_path), text_feat_dir, visual_feat_dir)
     print(f"Text embeddings: {len(text_embs)}; Visual embeddings: {len(visual_embs)}")
     print(f"Sample text meta: {text_meta[0] if text_meta else None}")
     print(f"Sample visual meta: {visual_meta[0] if visual_meta else None}")
