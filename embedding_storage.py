@@ -15,12 +15,25 @@ import faiss
 
 
 def _to_serializable(results: List[dict]):
+    """Convert numpy arrays to lists recursively in a list of dictionaries."""
+    def convert_item(item):
+        if isinstance(item, np.ndarray):
+            return item.tolist()
+        elif isinstance(item, dict):
+            return {k: convert_item(v) for k, v in item.items()}
+        elif isinstance(item, list):
+            return [convert_item(x) for x in item]
+        elif isinstance(item, tuple):
+            return tuple(convert_item(x) for x in item)
+        else:
+            return item
+
     out = []
     for r in results:
-        r_copy = r.copy()
-        if isinstance(r_copy.get("embedding"), (np.ndarray,)):
-            r_copy["embedding"] = r_copy["embedding"].tolist()
-        out.append(r_copy)
+        if r is None:
+            out.append(None)
+        else:
+            out.append(convert_item(r))
     return out
 
 
@@ -49,7 +62,7 @@ def save_video_features(video_id: str, text_results: List[dict], visual_results:
         json.dump(visual_serializable, f)
 
 
-class FaissDBSimple:
+class FaissDB:
     """Minimal helper to build and save a FAISS IndexFlatL2 and metadata file."""
     def __init__(self, dim: int, index_path: str):
         self.dim = dim
@@ -62,6 +75,11 @@ class FaissDBSimple:
         self.index.add(embeddings)
         self.metadata.extend(metadata)
 
+    def load(self):
+        self.index = faiss.read_index(self.index_path)
+        with open(self.index_path + ".meta.json", "r") as f:
+            self.metadata = json.load(f)
+
     def save(self):
         # Ensure parent directory exists before attempting to write index file
         parent_dir = os.path.dirname(self.index_path)
@@ -69,18 +87,24 @@ class FaissDBSimple:
             os.makedirs(parent_dir, exist_ok=True)
         faiss.write_index(self.index, self.index_path)
 
-        # Convert all NumPy arrays inside the metadata to lists
-        sanitized_metadata = []
-        for item in self.metadata:
-            sanitized_item = item.copy()
-            if 'embedding' in sanitized_item and isinstance(sanitized_item['embedding'], np.ndarray):
-                sanitized_item['embedding'] = sanitized_item['embedding'].tolist()
-            sanitized_metadata.append(sanitized_item)
+        # Use _to_serializable to handle all numpy arrays recursively
+        sanitized_metadata = _to_serializable(self.metadata)
 
         with open(self.index_path + ".meta.json", "w") as f:
             json.dump(sanitized_metadata, f)
 
-    def search(self, query_vec, top_k=5):
+    def search(self, query_vec, top_k=5, save_results=True, results_file="search_results.json"):
+        """Search for top-k similar embeddings and return serializable results.
+
+        Args:
+            query_vec: 1D numpy array representing the query vector
+            top_k: number of top results to return
+            save_results: whether to save results to a JSON file
+            results_file: name of the file to save results (default: "search_results.json")
+
+        Returns:
+            List of dictionaries with 'score' and 'meta' keys, sorted by score (descending)
+        """
         # query_vec should be 1D numpy array
         q = query_vec.astype(np.float32)
         # normalize as the pipeline used normalized vectors
@@ -88,15 +112,47 @@ class FaissDBSimple:
         if norm == 0:
             raise ValueError("Query vector has zero norm.")
         q = q / norm
+
+        # Perform FAISS search
         D, I = self.index.search(q.reshape(1, -1), top_k)
+
+        # Build results list with metadata
         results = []
         for dist, idx in zip(D[0], I[0]):
             if idx < 0 or idx >= len(self.metadata):
                 results.append({"score": float(dist), "meta": None})
             else:
-                results.append({"score": float(dist), "meta": self.metadata[idx]})
+                result_meta = self.metadata[idx].copy() if self.metadata[idx] else None
+                results.append({"score": float(dist), "meta": result_meta})
 
-        return sorted(results, key=lambda x: x["score"], reverse=True)
+        # Sort by score (higher scores first for similarity)
+        sorted_results = sorted(results, key=lambda x: x["score"], reverse=True)
+
+        # Use _to_serializable to ensure all numpy arrays are converted to lists
+        serializable_results = _to_serializable(sorted_results)
+
+        # Save results to JSON file if requested
+        if save_results:
+            # Determine the directory to save results (same as index directory)
+            index_dir = os.path.dirname(self.index_path) if os.path.dirname(self.index_path) else "."
+            results_path = os.path.join(index_dir, results_file)
+
+            # Create search results with metadata
+            search_output = {
+                "query_info": {
+                    "top_k": top_k,
+                    "num_results": len(serializable_results),
+                    "index_path": self.index_path
+                },
+                "results": serializable_results
+            }
+
+            with open(results_path, "w") as f:
+                json.dump(search_output, f, indent=2)
+
+            print(f"Search results saved to: {results_path}")
+
+        return serializable_results
 
 
 def save_faiss_indices_from_lists(all_text_embs, all_text_meta, all_visual_embs, all_visual_meta, faiss_text_path, faiss_visual_path):
@@ -109,14 +165,14 @@ def save_faiss_indices_from_lists(all_text_embs, all_text_meta, all_visual_embs,
         # all_text_embs is expected to be a list/sequence of array-like embeddings
         first_emb = np.array(all_text_embs[0])
         dim = int(first_emb.shape[0])
-        text_db = FaissDBSimple(dim=dim, index_path=faiss_text_path)
+        text_db = FaissDB(dim=dim, index_path=faiss_text_path)
         text_db.add(all_text_embs, all_text_meta)
         text_db.save()
 
     if all_visual_embs:
         first_emb = np.array(all_visual_embs[0])
         dim = int(first_emb.shape[0])
-        visual_db = FaissDBSimple(dim=dim, index_path=faiss_visual_path)
+        visual_db = FaissDB(dim=dim, index_path=faiss_visual_path)
         visual_db.add(all_visual_embs, all_visual_meta)
         visual_db.save()
 
