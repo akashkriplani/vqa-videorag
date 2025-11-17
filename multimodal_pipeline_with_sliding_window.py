@@ -1,0 +1,702 @@
+"""
+multimodal_pipeline.py
+Modular pipeline for multimodal medical video processing:
+- ASR (United-MedASR)
+- Entity recognition & text embeddings (BioBERT/ClinicalBERT, SciSpacy/HF NER)
+- Frame extraction & visual embeddings (BiomedCLIP)
+- FAISS DB integration
+- Demo pipeline
+"""
+import os
+import gc
+import subprocess
+import tempfile
+import torch
+import numpy as np
+import hashlib
+from sklearn.metrics.pairwise import cosine_similarity
+from transformers import AutoTokenizer, AutoModel
+import open_clip
+import getpass
+import faiss
+import spacy
+from scispacy.umls_linking import UmlsEntityLinker
+from PIL import Image
+import cv2
+import json
+from concurrent.futures import ProcessPoolExecutor, as_completed
+from dotenv import load_dotenv
+from huggingface_hub import login as hf_login
+from tqdm import tqdm  # <-- Add tqdm for progress bars
+# from google.colab import userdata
+from whisper_patch import get_whisper_pipeline_with_timestamps_simple
+from embedding_storage import FaissDB, save_video_features, save_faiss_indices_from_lists
+from data_preparation import filter_json_by_embeddings
+
+# Top-level function for multiprocessing
+
+# Parallel processing flag
+ENABLE_PARALLEL = True  # Set to False to disable parallel processing
+
+# NER toggle flag
+ENABLE_NER = False  # Set to True to enable NER/entity extraction
+
+
+# Flag to use Colab secrets for HF_TOKEN (default: True)
+USE_COLAB_SECRETS = True
+
+# Load HuggingFace token from .env, Colab secrets, or prompt
+load_dotenv()
+HF_TOKEN = os.environ.get("HF_TOKEN")
+
+# if HF_TOKEN is None and USE_COLAB_SECRETS:
+#     try:
+#         HF_TOKEN = userdata.get('HF_TOKEN')
+#     except Exception:
+#         HF_TOKEN = None
+
+if HF_TOKEN is None:
+    try:
+        HF_TOKEN = getpass.getpass("Enter your HuggingFace token (for gated models): ")
+        hf_login(HF_TOKEN)
+    except Exception as e:
+        print("Warning: Could not login to HuggingFace. If you get a 401 error, set HF_TOKEN env variable or login manually.")
+else:
+    hf_login(HF_TOKEN)
+
+# 1. ASR with United-MedASR
+
+def extract_audio_ffmpeg(video_path, audio_path):
+    cmd = [
+        'ffmpeg', '-y', '-i', video_path, '-vn', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', audio_path
+    ]
+    subprocess.run(cmd, check=True)
+
+def transcribe_with_asr(video_path, asr_model_id="openai/whisper-tiny"):
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+        gc.collect()
+    with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp_audio:
+        extract_audio_ffmpeg(video_path, tmp_audio.name)
+        pipe = get_whisper_pipeline_with_timestamps_simple(asr_model_id, device=None)
+    print(f"Transcribing audio with ASR: {video_path} using model: {asr_model_id}")
+    result = pipe(tmp_audio.name)
+    os.remove(tmp_audio.name)
+    # result['chunks'] contains word-level timestamps
+    chunks = result['chunks']
+    return chunks
+
+# 2. Entity recognition & text embeddings
+
+def load_ner_and_embed_models():
+    if ENABLE_NER:
+        nlp = spacy.load("en_core_sci_lg")
+        linker = UmlsEntityLinker(resolve_abbreviations=True)
+        nlp.add_pipe(linker)
+    else:
+        nlp = None
+    bert_tokenizer = AutoTokenizer.from_pretrained("emilyalsentzer/Bio_ClinicalBERT")
+    bert_model = AutoModel.from_pretrained("emilyalsentzer/Bio_ClinicalBERT")
+    return nlp, bert_tokenizer, bert_model
+
+
+
+def extract_entities_and_embed_optimized(transcript_chunks, nlp, bert_tokenizer, bert_model, video_id,
+                                        window_size=256, stride=192, max_length=512):
+    """
+    Optimized sliding window approach with reduced overlap for token efficiency.
+
+    Key improvements:
+    - Single pass with 25% overlap (stride=192, window=256) instead of 50%
+    - Efficient timestamp mapping for accurate segment identification
+    - Shared segment_id for linking text and visual embeddings
+    - Hash-based deduplication integrated into generation
+
+    Args:
+        window_size: 256 tokens (optimal for BERT context)
+        stride: 192 tokens (25% overlap, reduced from 50%)
+        max_length: Maximum BERT sequence length
+    """
+    results = []
+    seen_hashes = set()  # Integrated deduplication
+
+    # Combine all transcript text with timestamp mapping
+    full_text = ""
+    timestamp_map = []
+
+    for chunk in transcript_chunks:
+        text = chunk['text']
+        ts = chunk['timestamp']
+
+        start_char = len(full_text)
+        full_text += text + " "
+        end_char = len(full_text) - 1
+
+        timestamp_map.append({
+            'start_char': start_char,
+            'end_char': end_char,
+            'timestamp': ts,
+            'text': text
+        })
+
+    # Tokenize full text
+    full_tokens = bert_tokenizer.encode(full_text, add_special_tokens=False)
+
+    if not full_tokens:
+        return results
+
+    print(f"Processing {len(full_tokens)} tokens with window_size={window_size}, stride={stride}")
+
+    # Create sliding windows
+    for window_idx, start_idx in enumerate(range(0, len(full_tokens), stride)):
+        end_idx = min(start_idx + window_size, len(full_tokens))
+        window_tokens = full_tokens[start_idx:end_idx]
+
+        if len(window_tokens) < window_size // 4:  # Skip very small windows at the end
+            continue
+
+        window_text = bert_tokenizer.decode(window_tokens, clean_up_tokenization_spaces=True)
+
+        # Hash-based deduplication
+        content_hash = hashlib.md5(window_text.encode('utf-8')).hexdigest()
+        if content_hash in seen_hashes:
+            continue
+        seen_hashes.add(content_hash)
+
+        # Find representative timestamp
+        start_char_approx = int((start_idx / len(full_tokens)) * len(full_text))
+        end_char_approx = int((end_idx / len(full_tokens)) * len(full_text))
+
+        overlapping_timestamps = []
+        for ts_info in timestamp_map:
+            if (ts_info['start_char'] <= end_char_approx and
+                ts_info['end_char'] >= start_char_approx):
+                overlapping_timestamps.append(ts_info['timestamp'])
+
+        representative_ts = overlapping_timestamps[len(overlapping_timestamps)//2] if overlapping_timestamps else timestamp_map[0]['timestamp'] if timestamp_map else (0, 0)
+
+        # Entity extraction
+        entities = []
+        if ENABLE_NER and nlp is not None:
+            try:
+                doc = nlp(window_text)
+                entities = [(ent.text, ent._.umls_ents) for ent in doc.ents if hasattr(ent._, 'umls_ents')]
+            except Exception as e:
+                print(f"NER failed for window {window_idx}: {e}")
+
+        # Generate embedding
+        inputs = bert_tokenizer(window_text, return_tensors="pt",
+                              truncation=True, max_length=max_length,
+                              padding=True)
+
+        try:
+            with torch.no_grad():
+                outputs = bert_model(**inputs)
+                emb = outputs.last_hidden_state[:, 0, :].squeeze().cpu().numpy()
+        except Exception as e:
+            print(f"Embedding generation failed for window {window_idx}: {e}")
+            continue
+
+        # Create segment_id for multimodal linking: video_id + window_idx
+        segment_id = f"{video_id}_seg_{window_idx}"
+
+        results.append({
+            "video_id": video_id,
+            "segment_id": segment_id,  # NEW: for linking text and visual
+            "window_id": window_idx,
+            "timestamp": representative_ts,
+            "text": window_text,
+            "content_hash": content_hash,
+            "overlapping_timestamps": overlapping_timestamps,
+            "entities": entities,
+            "embedding": emb,
+            "window_info": {
+                "start_token": start_idx,
+                "end_token": end_idx,
+                "window_size": len(window_tokens),
+                "total_tokens": len(full_tokens)
+            }
+        })
+
+    print(f"Generated {len(results)} unique text embeddings (deduplicated from {window_idx + 1} windows)")
+    return results
+
+# REMOVED: Replaced by extract_entities_and_embed_optimized
+
+# REMOVED: Replaced by extract_entities_and_embed_optimized
+
+def deduplicate_embeddings_similarity(embeddings_list, similarity_threshold=0.95):
+    """
+    Similarity-based deduplication for embeddings (hash-based already done during generation).
+
+    Args:
+        embeddings_list: List of embedding dictionaries (already hash-deduplicated)
+        similarity_threshold: Cosine similarity threshold for near-duplicate detection
+
+    Returns:
+        Deduplicated list of embeddings
+    """
+    if len(embeddings_list) <= 1:
+        return embeddings_list
+
+    print(f"Applying similarity-based deduplication to {len(embeddings_list)} embeddings...")
+    embeddings_matrix = np.vstack([emb_data['embedding'] for emb_data in embeddings_list])
+
+    # Compute cosine similarity matrix
+    similarity_matrix = cosine_similarity(embeddings_matrix)
+
+    # Find near-duplicates
+    to_remove = set()
+
+    for i in range(len(similarity_matrix)):
+        if i in to_remove:
+            continue
+        for j in range(i + 1, len(similarity_matrix)):
+            if j in to_remove:
+                continue
+            if similarity_matrix[i][j] > similarity_threshold:
+                # Keep the one with more entities or earlier timestamp
+                emb_i = embeddings_list[i]
+                emb_j = embeddings_list[j]
+
+                entities_i = len(emb_i.get('entities', []))
+                entities_j = len(emb_j.get('entities', []))
+
+                if entities_i >= entities_j:
+                    to_remove.add(j)
+                else:
+                    to_remove.add(i)
+
+    # Remove near-duplicates
+    final_deduplicated = [emb_data for i, emb_data in enumerate(embeddings_list)
+                         if i not in to_remove]
+
+    print(f"Similarity deduplication: Removed {len(to_remove)} near-duplicates")
+    print(f"Final result: {len(final_deduplicated)} unique embeddings")
+
+    return final_deduplicated
+
+def extract_entities_and_embed(transcript_chunks, nlp, bert_tokenizer, bert_model, video_id, **kwargs):
+    """
+    Unified embedding function using optimized sliding window approach.
+
+    Uses window_size=256, stride=192 (25% overlap) for token efficiency.
+    Includes integrated deduplication and segment_id for multimodal linking.
+
+    Args:
+        transcript_chunks: List of transcript chunks with timestamps
+        nlp: SpaCy NLP pipeline for entity extraction
+        bert_tokenizer: BERT tokenizer
+        bert_model: BERT model
+        video_id: Unique identifier for the video being processed
+        **kwargs: window_size, stride, max_length (optional overrides)
+    """
+    return extract_entities_and_embed_optimized(
+        transcript_chunks, nlp, bert_tokenizer, bert_model, video_id, **kwargs
+    )
+
+# 3. Frame extraction & visual embeddings
+
+def extract_frames_and_embed(video_path, text_segments, video_id, model_id='hf-hub:microsoft/BiomedCLIP-PubMedBERT_256-vit_base_patch16_224', frames_per_segment=2):
+    """
+    Extract frames and visual embeddings aligned with text segments.
+
+    Args:
+        video_path: Path to video file
+        text_segments: List of text segment dicts (from extract_entities_and_embed)
+        video_id: Video identifier
+        model_id: BiomedCLIP model ID
+        frames_per_segment: Number of frames to sample per text segment (reduced from 3 for efficiency)
+
+    Returns:
+        List of visual embeddings with segment_id for multimodal linking
+    """
+    model, _, preprocess_val = open_clip.create_model_and_transforms(model_id)
+    cap = cv2.VideoCapture(video_path)
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    results = []
+
+    if fps == 0:
+        print(f"Warning: Could not get FPS for video {video_path}")
+        cap.release()
+        return results
+
+    print(f"Extracting frames and visual embeddings: {video_path} (FPS: {fps})")
+
+    for segment in tqdm(text_segments, desc="Frame extraction", unit="segment"):
+        ts = segment['timestamp']
+        segment_id = segment.get('segment_id')  # Link to text segment
+
+        if not isinstance(ts, (tuple, list)) or len(ts) != 2:
+            continue
+
+        start_time, end_time = ts
+
+        # Sample frames uniformly across the segment
+        segment_duration = end_time - start_time
+        if segment_duration <= 0:
+            # Single frame at start time
+            frame_times = [start_time]
+        else:
+            # Sample frames_per_segment frames uniformly
+            frame_times = [start_time + (i * segment_duration / (frames_per_segment - 1))
+                          for i in range(frames_per_segment)] if frames_per_segment > 1 else [start_time]
+
+        embeddings = []
+        for frame_time in frame_times:
+            frame_idx = int(frame_time * fps)
+            cap.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
+            ret, frame = cap.read()
+            if not ret:
+                continue
+
+            # Process frame in-memory
+            with tempfile.NamedTemporaryFile(suffix='.jpg', delete=True) as tmp_img:
+                cv2.imwrite(tmp_img.name, frame)
+                image = Image.open(tmp_img.name).convert('RGB')
+                image_tensor = preprocess_val(image).unsqueeze(0)
+
+                with torch.no_grad():
+                    emb = model.encode_image(image_tensor).squeeze().cpu().numpy()
+                embeddings.append(emb)
+
+        # Average embeddings from sampled frames
+        if embeddings:
+            final_emb = np.mean(embeddings, axis=0)
+            results.append({
+                "video_id": video_id,
+                "segment_id": segment_id,  # NEW: Link to text segment
+                "timestamp": ts,
+                "frame_path": "in-memory",
+                "num_frames_averaged": len(embeddings),
+                "embedding": final_emb
+            })
+
+    cap.release()
+    print(f"Generated {len(results)} visual embeddings from {len(text_segments)} text segments")
+    return results
+
+def process_video_batch(batch_fnames, video_dir, text_feat_dir, visual_feat_dir, asr_model_id):
+    batch_results = {}
+    for fname in batch_fnames:
+        if not fname.endswith('.mp4'):
+            batch_results[fname] = (None, None, 'Not an mp4 file')
+            continue
+        video_id = os.path.splitext(fname)[0]
+        video_path = os.path.join(video_dir, fname)
+        text_json_path = os.path.join(text_feat_dir, f"{video_id}.json")
+        visual_json_path = os.path.join(visual_feat_dir, f"{video_id}.json")
+        # If JSON feature files already exist, load embeddings + metadata and return them
+        try:
+            text_embs, text_meta = None, None
+            visual_embs, visual_meta = None, None
+            if os.path.exists(text_json_path):
+                with open(text_json_path, 'r') as f:
+                    text_json = json.load(f)
+                # Reconstruct embeddings and metadata
+                text_embs = [np.array(r['embedding']) if isinstance(r.get('embedding'), list) else np.array(r.get('embedding')) for r in text_json]
+                text_meta = [{"video_id": video_id, **{k: v for k, v in r.items() if k != 'embedding'}} for r in text_json]
+            if os.path.exists(visual_json_path):
+                with open(visual_json_path, 'r') as f:
+                    visual_json = json.load(f)
+                visual_embs = [np.array(r['embedding']) if isinstance(r.get('embedding'), list) else np.array(r.get('embedding')) for r in visual_json]
+                visual_meta = [{"video_id": video_id, **{k: v for k, v in r.items() if k != 'embedding'}} for r in visual_json]
+
+            if text_embs is not None or visual_embs is not None:
+                # Normalize output shape to match the usual (text, visual, error) tuple structure
+                text_tuple = (text_embs, text_meta) if text_embs is not None else (None, None)
+                visual_tuple = (visual_embs, visual_meta) if visual_embs is not None else (None, None)
+                batch_results[fname] = (text_tuple, visual_tuple, None)
+                continue
+        except Exception as e:
+            # If existing JSONs are corrupt/unreadable, return an error for this file and continue
+            batch_results[fname] = (None, None, f"Failed to load existing JSONs: {e}")
+            continue
+        try:
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            elif torch.backends.mps.is_available():
+                torch.mps.empty_cache()
+            gc.collect()
+            transcript_chunks = transcribe_with_asr(video_path, asr_model_id)
+            nlp, bert_tokenizer, bert_model = load_ner_and_embed_models()
+            text_results = extract_entities_and_embed(transcript_chunks, nlp, bert_tokenizer, bert_model, video_id=video_id)
+            visual_results = extract_frames_and_embed(video_path, text_results, video_id=video_id)
+            # Delegate saving to FAISS storage helper
+            try:
+                save_video_features(video_id, text_results, visual_results, text_feat_dir, visual_feat_dir)
+            except Exception:
+                pass
+            text_embs = [r['embedding'] for r in text_results]
+            text_meta = [{"video_id": video_id, **r} for r in text_results]
+            visual_embs = [r['embedding'] for r in visual_results]
+            visual_meta = [{"video_id": video_id, **r} for r in visual_results]
+            batch_results[fname] = ((text_embs, text_meta), (visual_embs, visual_meta), None)
+        except Exception as e:
+            batch_results[fname] = (None, None, str(e))
+    return batch_results
+
+def parallel_process_videos(fnames, video_dir, text_feat_dir, visual_feat_dir, asr_model_id="openai/whisper-tiny", batch_size=1, max_workers=2):
+    """
+    Full pipeline parallel processing with batching: ASR, NER, embedding, JSON saving.
+    """
+    # Split fnames into batches
+    batches = [fnames[i:i+batch_size] for i in range(0, len(fnames), batch_size)]
+    results = {}
+    total = len(fnames)
+    processed = 0
+    with ProcessPoolExecutor(max_workers=max_workers) as executor:
+        futures = {executor.submit(process_video_batch, batch, video_dir, text_feat_dir, visual_feat_dir, asr_model_id): tuple(batch) for batch in batches}
+        for fut in as_completed(futures):
+            batch_result = fut.result()
+            for fname, (text, visual, error) in batch_result.items():
+                processed += 1
+                if error == 'JSONs already exist':
+                    print(f"[SKIP] {fname}: {error} | Progress: {processed}/{total} videos processed.")
+                elif error:
+                    print(f"[ERROR] {fname}: {error} | Progress: {processed}/{total} videos processed.")
+                else:
+                    print(f"[DONE] {fname} | Progress: {processed}/{total} videos processed.")
+                results[fname] = (text, visual)
+    return results
+
+# 4. Demo pipeline
+
+def demo_pipeline(video_path, text_feat_dir, visual_feat_dir, faiss_text_path, faiss_visual_path):
+    os.makedirs(text_feat_dir, exist_ok=True)
+    os.makedirs(visual_feat_dir, exist_ok=True)
+
+    fname = os.path.basename(video_path)
+    video_dir = os.path.dirname(video_path)
+
+    if not fname.endswith('.mp4'):
+        return None, None
+
+    video_id = os.path.splitext(fname)[0]
+    video_path = os.path.join(video_dir, fname)
+    text_json_path = os.path.join(text_feat_dir, f"{video_id}.json")
+    visual_json_path = os.path.join(visual_feat_dir, f"{video_id}.json")
+
+    print(f"Processing video: {video_path}")
+
+    # ASR
+    transcript_chunks = transcribe_with_asr(video_path)
+
+    print(f"Transcription complete: {len(transcript_chunks)} chunks extracted.")
+
+    # NER + text embedding
+    nlp, bert_tokenizer, bert_model = load_ner_and_embed_models()
+    text_results = extract_entities_and_embed(transcript_chunks, nlp, bert_tokenizer, bert_model, video_id=video_id)
+
+    print(f"Extracted entities and generated text embeddings: {len(text_results)} items.")
+
+    # Apply similarity-based deduplication (hash-based already done during generation)
+    print("\nApplying similarity-based deduplication to text embeddings...")
+    text_results = deduplicate_embeddings_similarity(text_results, similarity_threshold=0.95)
+
+    print(f"Text embeddings after deduplication: {len(text_results)}")
+
+    # Convert embeddings to lists for JSON serialization
+    # Save textual features to JSON
+    text_results_serializable = []
+    for r in text_results:
+        r_copy = r.copy()
+        if isinstance(r_copy.get('embedding'), np.ndarray):
+            r_copy['embedding'] = r_copy['embedding'].tolist()
+        text_results_serializable.append(r_copy)
+    with open(text_json_path, 'w') as f:
+        json.dump(text_results_serializable, f)
+
+    # Visual embedding
+    visual_results = extract_frames_and_embed(video_path, text_results, video_id=video_id)
+
+    print(f"Generated visual embeddings: {len(visual_results)} items.")
+
+    # Apply similarity-based deduplication to visual embeddings
+    print("\nApplying similarity-based deduplication to visual embeddings...")
+    visual_results = deduplicate_embeddings_similarity(visual_results, similarity_threshold=0.98)
+
+    print(f"Visual embeddings after deduplication: {len(visual_results)}")
+    # Convert embeddings to lists for JSON serialization
+    # Save visual features to JSON
+    visual_results_serializable = []
+    for r in visual_results:
+        r_copy = r.copy()
+        if isinstance(r_copy.get('embedding'), np.ndarray):
+            r_copy['embedding'] = r_copy['embedding'].tolist()
+        visual_results_serializable.append(r_copy)
+    with open(visual_json_path, 'w') as f:
+        json.dump(visual_results_serializable, f)
+    # Save to FAISS
+    text_db = FaissDB(dim=text_results[0]['embedding'].shape[0], index_path=faiss_text_path)
+    visual_db = FaissDB(dim=visual_results[0]['embedding'].shape[0], index_path=faiss_visual_path)
+    text_db.add([r['embedding'] for r in text_results], text_results)
+    visual_db.add([r['embedding'] for r in visual_results], visual_results)
+    text_db.save()
+    visual_db.save()
+    print("Databases saved.")
+
+    # Enhanced logging for demo results
+    print(f"\nFinal Results Summary:")
+    print(f"- Video ID: {video_id}")
+    print(f"- Text embeddings after deduplication: {len(text_results)}")
+    print(f"- Visual embeddings after deduplication: {len(visual_results)}")
+    print(f"- Text FAISS index dimension: {text_results[0]['embedding'].shape[0] if text_results else 'N/A'}")
+    print(f"- Visual FAISS index dimension: {visual_results[0]['embedding'].shape[0] if visual_results else 'N/A'}")
+
+    # Query demo
+    query = "How to do a mouth cancer check at home?"
+    inputs = bert_tokenizer(query, return_tensors="pt", truncation=True, padding=True, max_length=512)
+    with torch.no_grad():
+        outputs = bert_model(**inputs)
+        # Use CLS token pooling for consistency with embedding generation
+        query_emb = outputs.last_hidden_state[:, 0, :].squeeze().cpu().numpy()
+
+    print(f"\nDemo Query: {query}")
+    print("Text DB results:", text_db.search(query_emb, top_k=3))
+
+def process_video(fname, video_dir, text_feat_dir, visual_feat_dir):
+    if not fname.endswith('.mp4'):
+        return None, None
+    video_id = os.path.splitext(fname)[0]
+    video_path = os.path.join(video_dir, fname)
+    text_json_path = os.path.join(text_feat_dir, f"{video_id}.json")
+    visual_json_path = os.path.join(visual_feat_dir, f"{video_id}.json")
+    # Skip if both text and visual json files exist
+    if os.path.exists(text_json_path) and os.path.exists(visual_json_path):
+        print(f"[SKIP] {fname}: Both text and visual JSONs exist.")
+        return None, None
+    # Each thread loads its own models
+    nlp, bert_tokenizer, bert_model = load_ner_and_embed_models()
+    try:
+        transcript_chunks = transcribe_with_asr(video_path)
+    except Exception as e:
+        print(f"ASR failed for {video_path}: {e}")
+        return None, None
+    text_results = extract_entities_and_embed(transcript_chunks, nlp, bert_tokenizer, bert_model, video_id=video_id)
+    # Convert embeddings to lists for JSON serialization
+    text_results_serializable = []
+    for r in text_results:
+        r_copy = r.copy()
+        if isinstance(r_copy.get('embedding'), np.ndarray):
+            r_copy['embedding'] = r_copy['embedding'].tolist()
+        text_results_serializable.append(r_copy)
+    with open(text_json_path, 'w') as f:
+        json.dump(text_results_serializable, f)
+    text_embs = [r['embedding'] for r in text_results]
+    text_meta = [{"video_id": video_id, **r} for r in text_results]
+    visual_results = extract_frames_and_embed(video_path, text_results, video_id=video_id)
+    # Convert embeddings to lists for JSON serialization
+    visual_results_serializable = []
+    for r in visual_results:
+        r_copy = r.copy()
+        if isinstance(r_copy.get('embedding'), np.ndarray):
+            r_copy['embedding'] = r_copy['embedding'].tolist()
+        visual_results_serializable.append(r_copy)
+    with open(visual_json_path, 'w') as f:
+        json.dump(visual_results_serializable, f)
+    visual_embs = [r['embedding'] for r in visual_results]
+    visual_meta = [{"video_id": video_id, **r} for r in visual_results]
+    return (text_embs, text_meta), (visual_embs, visual_meta)
+
+
+def process_split(split, video_dir, text_feat_dir, visual_feat_dir, faiss_text_path, faiss_visual_path):
+    os.makedirs(text_feat_dir, exist_ok=True)
+    os.makedirs(visual_feat_dir, exist_ok=True)
+    all_text_embs, all_text_meta = [], []
+    all_visual_embs, all_visual_meta = [], []
+    fnames = [f for f in os.listdir(video_dir) if f.endswith('.mp4')]
+    batch_size = 4  # Tune for your hardware
+    max_workers = 2 if torch.cuda.is_available() or torch.backends.mps.is_available() else os.cpu_count()
+    if ENABLE_PARALLEL:
+        print(f"Parallel processing enabled: batch_size={batch_size}, max_workers={max_workers}")
+        results = parallel_process_videos(fnames, video_dir, text_feat_dir, visual_feat_dir, batch_size=batch_size, max_workers=max_workers)
+        for fname in fnames:
+            text, visual = results.get(fname, (None, None))
+            if text and all(item is not None for item in text):
+                all_text_embs.extend(text[0])
+                all_text_meta.extend(text[1])
+            if visual and all(item is not None for item in visual):
+                all_visual_embs.extend(visual[0])
+                all_visual_meta.extend(visual[1])
+            # Free up memory
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            elif torch.backends.mps.is_available():
+                torch.mps.empty_cache()
+            gc.collect()
+    else:
+        total = len(fnames)
+        done = 0
+        for idx, fname in enumerate(fnames, 1):
+            text, visual = process_video(fname, video_dir, text_feat_dir, visual_feat_dir)
+            if text:
+                all_text_embs.extend(text[0])
+                all_text_meta.extend(text[1])
+            if visual:
+                all_visual_embs.extend(visual[0])
+                all_visual_meta.extend(visual[1])
+            done += 1
+            print(f"Progress: {done}/{total} videos processed.")
+    # Delegate FAISS index building / saving to embedding_storage
+    try:
+        save_faiss_indices_from_lists(all_text_embs, all_text_meta, all_visual_embs, all_visual_meta, faiss_text_path, faiss_visual_path)
+    except Exception:
+        # Fallback: try previous logic if the helper fails
+        if all_text_embs:
+            print("Saving text embeddings to FAISS (fallback)...")
+            text_db = FaissDB(dim=len(all_text_embs[0]), index_path=faiss_text_path)
+            text_db.add(all_text_embs, all_text_meta)
+            text_db.save()
+        if all_visual_embs:
+            print("Saving visual embeddings to FAISS (fallback)...")
+            visual_db = FaissDB(dim=len(all_visual_embs[0]), index_path=faiss_visual_path)
+            visual_db.add(all_visual_embs, all_visual_meta)
+            visual_db.save()
+    print(f"Done processing split: {split}")
+
+def test_single_video(video_path, text_feat_dir, visual_feat_dir):
+    os.makedirs(text_feat_dir, exist_ok=True)
+    os.makedirs(visual_feat_dir, exist_ok=True)
+    fname = os.path.basename(video_path)
+    (text_embs, text_meta), (visual_embs, visual_meta) = process_video(fname, os.path.dirname(video_path), text_feat_dir, visual_feat_dir)
+    print(f"Text embeddings: {len(text_embs)}; Visual embeddings: {len(visual_embs)}")
+    print(f"Sample text meta: {text_meta[0] if text_meta else None}")
+    print(f"Sample visual meta: {visual_meta[0] if visual_meta else None}")
+
+def main():
+    # Test mode for a single video
+    # test_single_video("videos_train/_6csIJAWj_s.mp4", "feature_extraction/textual/test_single", "feature_extraction/visual/test_single")
+
+    # Test demo pipeline
+    demo_pipeline(
+        video_path="videos_train/_6csIJAWj_s.mp4",
+        text_feat_dir="feature_extraction/textual/demo",
+        visual_feat_dir="feature_extraction/visual/demo",
+        faiss_text_path="faiss_db/textual_demo.index",
+        faiss_visual_path="faiss_db/visual_demo.index")
+
+  # Uncomment above and set your video path to test single video or run a demo pipeline
+#   splits = [
+#     ("train", "videos_train"),
+#     ("val", "videos_val"),
+#     ("test", "videos_test")
+#   ]
+
+#   for split, video_dir in splits:
+#       print(f"Processing split: {split}")
+#       process_split(
+#           split=split,
+#           video_dir=video_dir,
+#           text_feat_dir=f"feature_extraction/textual/{split}",
+#           visual_feat_dir=f"feature_extraction/visual/{split}",
+#           faiss_text_path=f"faiss_db/textual_{split}.index",
+#           faiss_visual_path=f"faiss_db/visual_{split}.index"
+#       )
+
+#   # After all splits are processed, filter JSON files based on available embeddings
+#   print("\nFiltering JSON files to keep only entries with both textual and visual embeddings...")
+#   filter_json_by_embeddings(model_name="openai/whisper-tiny")
+
+if __name__ == "__main__":
+    main()
