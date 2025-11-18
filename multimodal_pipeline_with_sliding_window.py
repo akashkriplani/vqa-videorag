@@ -34,6 +34,15 @@ from embedding_storage import FaissDB, save_video_features, save_faiss_indices_f
 from data_preparation import filter_json_by_embeddings
 from hierarchical_search_utils import hierarchical_search, get_extended_context
 
+# Import aggregation and output formatting from query_faiss for consistency
+try:
+    from query_faiss import aggregate_results_by_segment, print_segment_results, format_timestamp
+except ImportError:
+    print("Warning: Could not import from query_faiss. Multimodal aggregation may not be available.")
+    aggregate_results_by_segment = None
+    print_segment_results = None
+    format_timestamp = None
+
 # Top-level function for multiprocessing
 
 # Parallel processing flag
@@ -668,84 +677,106 @@ def demo_pipeline(video_path, text_feat_dir, visual_feat_dir, faiss_text_path, f
     print(f"- Text FAISS index dimension: {text_results[0]['embedding'].shape[0] if text_results else 'N/A'}")
     print(f"- Visual FAISS index dimension: {visual_results[0]['embedding'].shape[0] if visual_results else 'N/A'}")
 
-    # Query demo with hierarchical search
+    # Query demo with multimodal search (matching query_faiss.py output format)
     query = "How to do a mouth cancer check at home?"
+
+    # Generate query embeddings for both text and visual modalities
     inputs = bert_tokenizer(query, return_tensors="pt", truncation=True, padding=True, max_length=512)
     with torch.no_grad():
         outputs = bert_model(**inputs)
         # Use CLS token pooling for consistency with embedding generation
-        query_emb = outputs.last_hidden_state[:, 0, :].squeeze().cpu().numpy()
+        query_emb_text = outputs.last_hidden_state[:, 0, :].squeeze().cpu().numpy()
+
+    # Normalize text embedding for FAISS search
+    norm = np.linalg.norm(query_emb_text)
+    if norm > 0:
+        query_emb_text = query_emb_text / norm
+
+    # For visual search, we need BiomedCLIP text encoder
+    # Load BiomedCLIP for cross-modal text->visual search
+    print("Loading BiomedCLIP for cross-modal search...")
+    clip_model, _, _ = open_clip.create_model_and_transforms(
+        'hf-hub:microsoft/BiomedCLIP-PubMedBERT_256-vit_base_patch16_224',
+        pretrained=True
+    )
+    clip_model.eval()
+
+    # Tokenize with proper context length for BiomedCLIP
+    tokenizer = open_clip.get_tokenizer('hf-hub:microsoft/BiomedCLIP-PubMedBERT_256-vit_base_patch16_224')
+    tokens = tokenizer([query])
+    with torch.no_grad():
+        query_emb_visual = clip_model.encode_text(tokens).squeeze().cpu().numpy()
+
+    # Normalize visual embedding
+    norm = np.linalg.norm(query_emb_visual)
+    if norm > 0:
+        query_emb_visual = query_emb_visual / norm
 
     print(f"\n{'='*80}")
     print(f"DEMO QUERY: {query}")
     print(f"{'='*80}")
 
-    # Standard FAISS search
-    print("\n[1] Standard FAISS Search:")
-    standard_results = text_db.search(query_emb, top_k=3)
-    for i, result in enumerate(standard_results, 1):
-        print(f"\n  Result {i}:")
-        dist = result.get('distance', float('inf'))
-        print(f"    Distance: {dist:.4f}" if isinstance(dist, (int, float)) else f"    Distance: {dist}")
-        if result.get('metadata'):
-            meta = result['metadata']
-            print(f"    Segment ID: {meta.get('segment_id', 'N/A')}")
-            print(f"    Timestamp: {meta.get('timestamp', 'N/A')}")
-            text_snippet = meta.get('text', '')[:150]
-            print(f"    Text: {text_snippet}...")
+    # Perform multimodal search
+    print("\n[1] Searching textual index...")
+    text_search_results = text_db.search(query_emb_text, top_k=10)
 
-    # Hierarchical search with fine-grained timestamps
-    print(f"\n{'='*80}")
-    print("[2] Hierarchical Search with Fine-Grained Timestamps:")
-    print(f"{'='*80}")
-    refined_results = hierarchical_search(
-        query_emb=query_emb,
-        faiss_db=text_db,
-        segments_data=text_results,
-        top_k=3,
-        enable_fine_grained=True,
-        result_format='multimodal'
-    )
+    print("[2] Searching visual index...")
+    visual_search_results = visual_db.search(query_emb_visual, top_k=10)
 
-    for i, result in enumerate(refined_results, 1):
-        print(f"\n  Result {i}:")
-        dist = result.get('distance', float('inf'))
-        print(f"    Distance: {dist:.4f}" if isinstance(dist, (int, float)) else f"    Distance: {dist}")
-        print(f"    Video ID: {result.get('video_id', 'N/A')}")
-        print(f"    Segment ID: {result.get('segment_id', 'N/A')}")
+    print(f"\nFound {len(text_search_results)} text results and {len(visual_search_results)} visual results")
 
-        if result.get('precise_timestamp'):
-            precise = result['precise_timestamp']
-            print(f"    Precise Timestamp: {precise[0]:.2f}s - {precise[1]:.2f}s")
+    # Transform results to match query_faiss format
+    def transform_faiss_results(results, is_visual=False):
+        """Transform FaissDB search results to query_faiss format"""
+        transformed = []
+        for result in results:
+            meta = result.get('metadata', {})
+            dist = result.get('distance', float('inf'))
+            transformed.append({
+                'meta': meta,
+                'raw_score': dist,
+                'distance': dist
+            })
+        return transformed
 
-        if result.get('full_timestamp_range'):
-            full_range = result['full_timestamp_range']
-            print(f"    Full Segment Range: {full_range[0]:.2f}s - {full_range[1]:.2f}s")
+    text_results_formatted = transform_faiss_results(text_search_results, is_visual=False)
+    visual_results_formatted = transform_faiss_results(visual_search_results, is_visual=True)
 
-        text_snippet = result.get('text', '')[:200]
-        print(f"    Text: {text_snippet}...")
+    # Apply segment-level aggregation (matching query_faiss.py)
+    if aggregate_results_by_segment is not None:
+        print("\n[3] Aggregating multimodal results by segment...")
+        segment_contexts = aggregate_results_by_segment(
+            text_results=text_results_formatted,
+            visual_results=visual_results_formatted,
+            top_k=10,
+            text_weight=0.6,
+            visual_weight=0.4,
+            enable_hierarchical=True,
+            json_dir=text_feat_dir
+        )
 
-        # Show coverage info
-        window_info = result.get('window_info', {})
-        if window_info:
-            print(f"    Window: tokens {window_info.get('start_token', 'N/A')}-{window_info.get('end_token', 'N/A')}")
-            print(f"    Coverage contribution: {window_info.get('coverage_contribution', 'N/A')} new tokens")
-
-    # Context expansion demo
-    if refined_results:
-        print(f"\n{'='*80}")
-        print("[3] Context Expansion (Top Result):")
-        print(f"{'='*80}")
-        top_result = refined_results[0]
-        context = get_extended_context(top_result.get('segment_id'), text_results, context_windows=1)
-
-        if context:
-            print(f"\n  Extended context ({context['num_segments']} segments):")
-            print(f"    Time range: {context['time_range'][0]:.2f}s - {context['time_range'][1]:.2f}s")
-            context_snippet = context['extended_text'][:300]
-            print(f"    Text: {context_snippet}...")
+        # Print and save results in the same format as query_faiss.py
+        if print_segment_results is not None:
+            print_segment_results(segment_contexts, query=query)
         else:
-            print("  No additional context available.")
+            print(f"\nFound {len(segment_contexts)} multimodal segments")
+            for i, ctx in enumerate(segment_contexts[:3], 1):
+                print(f"\nSegment {i}: {ctx['video_id']} | Score: {ctx['combined_score']:.4f}")
+                print(f"  Text: {ctx['text_evidence']['text'][:150] if ctx['text_evidence'] else 'N/A'}...")
+    else:
+        print("\nWarning: Multimodal aggregation not available. Install query_faiss dependencies.")
+        print("Showing individual search results instead...")
+
+        # Fallback: show individual results
+        print("\nTop Text Results:")
+        for i, result in enumerate(text_search_results[:3], 1):
+            meta = result.get('metadata', {})
+            print(f"  {i}. {meta.get('segment_id', 'N/A')} - Score: {result.get('distance', 'N/A'):.4f}")
+
+        print("\nTop Visual Results:")
+        for i, result in enumerate(visual_search_results[:3], 1):
+            meta = result.get('metadata', {})
+            print(f"  {i}. {meta.get('segment_id', 'N/A')} - Score: {result.get('distance', 'N/A'):.4f}")
 
 def process_video(fname, video_dir, text_feat_dir, visual_feat_dir):
     if not fname.endswith('.mp4'):
