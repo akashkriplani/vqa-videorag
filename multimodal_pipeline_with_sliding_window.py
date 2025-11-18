@@ -32,6 +32,7 @@ from tqdm import tqdm  # <-- Add tqdm for progress bars
 from whisper_patch import get_whisper_pipeline_with_timestamps_simple
 from embedding_storage import FaissDB, save_video_features, save_faiss_indices_from_lists
 from data_preparation import filter_json_by_embeddings
+from hierarchical_search_utils import hierarchical_search, get_extended_context
 
 # Top-level function for multiprocessing
 
@@ -569,126 +570,21 @@ def parallel_process_videos(fnames, video_dir, text_feat_dir, visual_feat_dir, a
 
 # 4. Demo pipeline
 
-def hierarchical_search(query_emb, text_db, json_data, top_k=5, enable_fine_grained=True):
+# Hierarchical search functions now imported from hierarchical_search_utils
+# Legacy wrapper for backward compatibility
+def hierarchical_search_legacy(query_emb, text_db, json_data, top_k=5, enable_fine_grained=True):
     """
-    Hierarchical search: coarse FAISS search + fine-grained timestamp refinement.
-
-    Args:
-        query_emb: Query embedding vector
-        text_db: FAISS database object
-        json_data: List of text segment metadata with overlapping_timestamps
-        top_k: Number of results to return
-        enable_fine_grained: If True, refine results using overlapping_timestamps
-
-    Returns:
-        List of refined search results with precise timestamps
+    Legacy wrapper for hierarchical_search - delegates to shared utility.
+    Kept for backward compatibility with existing code.
     """
-    # Step 1: Coarse search - get more candidates than needed
-    coarse_results = text_db.search(query_emb, top_k=top_k * 3)
-
-    if not enable_fine_grained:
-        return coarse_results[:top_k]
-
-    # Step 2: Fine-grained search - find exact timestamps
-    refined_results = []
-
-    for result in coarse_results:
-        if result.get('metadata') is None:
-            continue
-
-        segment_id = result['metadata'].get('segment_id')
-        if not segment_id:
-            continue
-
-        # Find corresponding segment in JSON data
-        segment = next((s for s in json_data if s['segment_id'] == segment_id), None)
-        if not segment:
-            refined_results.append(result)
-            continue
-
-        # Check overlapping_timestamps for best match
-        overlapping_ts = segment.get('overlapping_timestamps', [])
-
-        if overlapping_ts and len(overlapping_ts) > 0:
-            # Use middle timestamp as the most representative
-            best_ts = overlapping_ts[len(overlapping_ts)//2]
-
-            refined_results.append({
-                'distance': result.get('distance', float('inf')),
-                'metadata': result['metadata'],
-                'segment_id': segment_id,
-                'video_id': segment.get('video_id'),
-                'precise_timestamp': best_ts,
-                'full_timestamp_range': segment.get('timestamp'),
-                'text': segment.get('text', ''),
-                'window_info': segment.get('window_info', {}),
-                'all_timestamps': overlapping_ts
-            })
-        else:
-            refined_results.append(result)
-
-    # Sort by distance and return top-k
-    refined_results.sort(key=lambda x: x.get('distance', float('inf')))
-    return refined_results[:top_k]
-
-def get_extended_context(segment_id, json_data, context_windows=1):
-    """
-    Retrieve surrounding windows for richer context.
-
-    Args:
-        segment_id: Current segment ID
-        json_data: List of all segments
-        context_windows: Number of adjacent windows to include
-
-    Returns:
-        Dict with extended text and time range
-    """
-    current_segment = next((s for s in json_data if s['segment_id'] == segment_id), None)
-    if not current_segment:
-        return None
-
-    current_window_info = current_segment.get('window_info', {})
-    current_end_token = current_window_info.get('end_token')
-    current_start_token = current_window_info.get('start_token')
-    video_id = current_segment.get('video_id')
-
-    context_segments = [current_segment]
-
-    # Get previous window
-    for segment in json_data:
-        if (segment.get('video_id') == video_id and
-            segment.get('window_info', {}).get('end_token') == current_start_token):
-            context_segments.insert(0, segment)
-            if len(context_segments) >= context_windows + 1:
-                break
-
-    # Get next window
-    for segment in json_data:
-        if (segment.get('video_id') == video_id and
-            segment.get('window_info', {}).get('start_token') == current_end_token):
-            context_segments.append(segment)
-            if len(context_segments) >= context_windows * 2 + 1:
-                break
-
-    # Combine text
-    full_context = " ".join([s.get('text', '') for s in context_segments])
-
-    # Get time range
-    all_timestamps = []
-    for seg in context_segments:
-        all_timestamps.extend(seg.get('overlapping_timestamps', []))
-
-    if all_timestamps:
-        time_range = (all_timestamps[0][0], all_timestamps[-1][1])
-    else:
-        time_range = current_segment.get('timestamp', (0, 0))
-
-    return {
-        'extended_text': full_context,
-        'time_range': time_range,
-        'segments': context_segments,
-        'num_segments': len(context_segments)
-    }
+    return hierarchical_search(
+        query_emb=query_emb,
+        faiss_db=text_db,
+        segments_data=json_data,
+        top_k=top_k,
+        enable_fine_grained=enable_fine_grained,
+        result_format='multimodal'
+    )
 
 def demo_pipeline(video_path, text_feat_dir, visual_feat_dir, faiss_text_path, faiss_visual_path):
     os.makedirs(text_feat_dir, exist_ok=True)
@@ -802,7 +698,14 @@ def demo_pipeline(video_path, text_feat_dir, visual_feat_dir, faiss_text_path, f
     print(f"\n{'='*80}")
     print("[2] Hierarchical Search with Fine-Grained Timestamps:")
     print(f"{'='*80}")
-    refined_results = hierarchical_search(query_emb, text_db, text_results, top_k=3)
+    refined_results = hierarchical_search(
+        query_emb=query_emb,
+        faiss_db=text_db,
+        segments_data=text_results,
+        top_k=3,
+        enable_fine_grained=True,
+        result_format='multimodal'
+    )
 
     for i, result in enumerate(refined_results, 1):
         print(f"\n  Result {i}:")

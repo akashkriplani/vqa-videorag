@@ -22,6 +22,7 @@ import torch
 from transformers import AutoTokenizer, AutoModel
 import open_clip
 import faiss
+from hierarchical_search_utils import load_segments_from_json_files, refine_with_precise_timestamps
 
 
 class FaissIndex:
@@ -186,60 +187,33 @@ def extract_metadata(result):
 def hierarchical_refine_timestamps(text_results, json_files_dir):
     """
     Refine search results with precise timestamps from overlapping_timestamps.
-    
+
+    Now uses shared utility from hierarchical_search_utils.
+
     Args:
         text_results: List of raw search results
         json_files_dir: Directory containing JSON feature files
-    
+
     Returns:
         List of results with precise_timestamp field added
     """
-    refined = []
-    
+    # Extract unique video IDs from results
+    video_ids = set()
     for result in text_results:
         meta = result.get('meta', {}) or {}
         video_id = meta.get('video_id')
-        segment_id = meta.get('segment_id')
-        
-        if not video_id or not segment_id:
-            refined.append(result)
-            continue
-        
-        # Try to load JSON file for this video
-        json_path = os.path.join(json_files_dir, f"{video_id}.json")
-        if not os.path.exists(json_path):
-            refined.append(result)
-            continue
-        
-        try:
-            with open(json_path, 'r') as f:
-                segments = json.load(f)
-            
-            # Find matching segment
-            segment = next((s for s in segments if s.get('segment_id') == segment_id), None)
-            if not segment:
-                refined.append(result)
-                continue
-            
-            # Extract precise timestamp
-            overlapping_ts = segment.get('overlapping_timestamps', [])
-            if overlapping_ts and len(overlapping_ts) > 0:
-                # Use middle timestamp as most representative
-                precise_ts = overlapping_ts[len(overlapping_ts)//2]
-                
-                result_copy = result.copy()
-                result_copy['precise_timestamp'] = precise_ts
-                result_copy['all_timestamps'] = overlapping_ts
-                result_copy['full_segment_text'] = segment.get('text', '')
-                result_copy['window_info'] = segment.get('window_info', {})
-                refined.append(result_copy)
-            else:
-                refined.append(result)
-        except Exception as e:
-            print(f"Warning: Could not refine timestamps for {video_id}: {e}")
-            refined.append(result)
-    
-    return refined
+        if video_id:
+            video_ids.add(video_id)
+
+    # Load segments for all relevant videos
+    segments_by_video = load_segments_from_json_files(video_ids, json_files_dir)
+
+    # Use shared refinement utility
+    return refine_with_precise_timestamps(
+        text_results,
+        segments_by_video,
+        result_format='query_faiss'
+    )
 
 def aggregate_results_by_segment(text_results, visual_results, top_k=10, text_weight=0.6, visual_weight=0.4, enable_hierarchical=False, json_dir=None):
     """
@@ -268,7 +242,7 @@ def aggregate_results_by_segment(text_results, visual_results, top_k=10, text_we
         - precise_timestamp (if hierarchical search enabled)
     """
     from collections import defaultdict
-    
+
     # Apply hierarchical refinement if enabled
     if enable_hierarchical and json_dir:
         print("Applying hierarchical timestamp refinement...")
@@ -478,20 +452,20 @@ def print_segment_results(segment_contexts, query=None):
         if ctx["text_evidence"]:
             text_ev = ctx["text_evidence"]
             print(f"\n   📝 Text Evidence (similarity: {text_ev['similarity']:.4f}):")
-            
+
             # Show precise timestamp if available (hierarchical search)
             if text_ev.get('precise_timestamp'):
                 precise = text_ev['precise_timestamp']
                 print(f"      🎯 Precise timestamp: {precise[0]:.2f}s - {precise[1]:.2f}s")
-            
+
             snippet = text_ev['text'][:200] + "..." if len(text_ev['text']) > 200 else text_ev['text']
             print(f"      {snippet}")
-            
+
             if text_ev.get('entities'):
                 entities_str = ", ".join([ent[0] if isinstance(ent, (list, tuple)) else str(ent)
                                          for ent in text_ev['entities'][:5]])
                 print(f"      Medical Entities: {entities_str}")
-            
+
             # Show coverage info if available
             window_info = text_ev.get('window_info', {})
             if window_info and window_info.get('coverage_contribution'):
@@ -669,7 +643,7 @@ def main():
     parser.add_argument("--visual_weight", type=float, default=0.4, help="Weight for visual similarity in video aggregation (default: 0.4)")
     parser.add_argument("--filter_sampling", type=str, default=None, choices=["uniform", "adaptive", "quality_based"], help="Filter results by sampling strategy (optional)")
     parser.add_argument("--filter_aggregation", type=str, default=None, choices=["mean", "max"], help="Filter results by aggregation method (optional)")
-    parser.add_argument("--hierarchical", action="store_true", help="Enable hierarchical search with fine-grained timestamp refinement")
+    parser.add_argument("--hierarchical", default=True, action="store_true", help="Enable hierarchical search with fine-grained timestamp refinement")
     parser.add_argument("--json_dir", type=str, default="feature_extraction/textual/demo", help="Directory containing JSON feature files for hierarchical search")
     args = parser.parse_args()
 
