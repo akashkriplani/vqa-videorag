@@ -183,7 +183,65 @@ def extract_metadata(result):
     return result_dict
 
 
-def aggregate_results_by_segment(text_results, visual_results, top_k=10, text_weight=0.6, visual_weight=0.4):
+def hierarchical_refine_timestamps(text_results, json_files_dir):
+    """
+    Refine search results with precise timestamps from overlapping_timestamps.
+    
+    Args:
+        text_results: List of raw search results
+        json_files_dir: Directory containing JSON feature files
+    
+    Returns:
+        List of results with precise_timestamp field added
+    """
+    refined = []
+    
+    for result in text_results:
+        meta = result.get('meta', {}) or {}
+        video_id = meta.get('video_id')
+        segment_id = meta.get('segment_id')
+        
+        if not video_id or not segment_id:
+            refined.append(result)
+            continue
+        
+        # Try to load JSON file for this video
+        json_path = os.path.join(json_files_dir, f"{video_id}.json")
+        if not os.path.exists(json_path):
+            refined.append(result)
+            continue
+        
+        try:
+            with open(json_path, 'r') as f:
+                segments = json.load(f)
+            
+            # Find matching segment
+            segment = next((s for s in segments if s.get('segment_id') == segment_id), None)
+            if not segment:
+                refined.append(result)
+                continue
+            
+            # Extract precise timestamp
+            overlapping_ts = segment.get('overlapping_timestamps', [])
+            if overlapping_ts and len(overlapping_ts) > 0:
+                # Use middle timestamp as most representative
+                precise_ts = overlapping_ts[len(overlapping_ts)//2]
+                
+                result_copy = result.copy()
+                result_copy['precise_timestamp'] = precise_ts
+                result_copy['all_timestamps'] = overlapping_ts
+                result_copy['full_segment_text'] = segment.get('text', '')
+                result_copy['window_info'] = segment.get('window_info', {})
+                refined.append(result_copy)
+            else:
+                refined.append(result)
+        except Exception as e:
+            print(f"Warning: Could not refine timestamps for {video_id}: {e}")
+            refined.append(result)
+    
+    return refined
+
+def aggregate_results_by_segment(text_results, visual_results, top_k=10, text_weight=0.6, visual_weight=0.4, enable_hierarchical=False, json_dir=None):
     """
     Aggregate multimodal search results by segment_id for precise multimodal linking.
 
@@ -196,6 +254,8 @@ def aggregate_results_by_segment(text_results, visual_results, top_k=10, text_we
         top_k: Number of top segments to return
         text_weight: Weight for textual similarity (default: 0.6)
         visual_weight: Weight for visual similarity (default: 0.4)
+        enable_hierarchical: If True, refine with precise timestamps from JSON files
+        json_dir: Directory containing JSON feature files (required if enable_hierarchical=True)
 
     Returns:
         List of segment contexts sorted by relevance, each containing:
@@ -205,8 +265,15 @@ def aggregate_results_by_segment(text_results, visual_results, top_k=10, text_we
         - text_evidence (text content, entities, similarity)
         - visual_evidence (frame info, similarity)
         - timestamp
+        - precise_timestamp (if hierarchical search enabled)
     """
     from collections import defaultdict
+    
+    # Apply hierarchical refinement if enabled
+    if enable_hierarchical and json_dir:
+        print("Applying hierarchical timestamp refinement...")
+        text_results = hierarchical_refine_timestamps(text_results, json_dir)
+        visual_results = hierarchical_refine_timestamps(visual_results, json_dir)
 
     # First, group by segment_id for precise multimodal linking
     segment_contexts = defaultdict(lambda: {
@@ -243,7 +310,9 @@ def aggregate_results_by_segment(text_results, visual_results, top_k=10, text_we
                     "entities": meta.get("entities", []),
                     "similarity": similarity,
                     "raw_distance": dist,
-                    "window_info": meta.get("window_info", {})
+                    "window_info": meta.get("window_info", {}),
+                    "precise_timestamp": text_results[text_results.index(result)].get('precise_timestamp') if enable_hierarchical else None,
+                    "all_timestamps": text_results[text_results.index(result)].get('all_timestamps') if enable_hierarchical else None
                 }
             })
 
@@ -269,7 +338,9 @@ def aggregate_results_by_segment(text_results, visual_results, top_k=10, text_we
                     "frame_info": meta.get("frame_path", "in-memory"),
                     "num_frames": meta.get("num_frames_averaged", 1),
                     "similarity": similarity,
-                    "raw_distance": dist
+                    "raw_distance": dist,
+                    "sampling_strategy": meta.get("sampling_strategy", "unknown"),
+                    "aggregation_method": meta.get("aggregation_method", "unknown")
                 }
             })
 
@@ -407,18 +478,36 @@ def print_segment_results(segment_contexts, query=None):
         if ctx["text_evidence"]:
             text_ev = ctx["text_evidence"]
             print(f"\n   📝 Text Evidence (similarity: {text_ev['similarity']:.4f}):")
+            
+            # Show precise timestamp if available (hierarchical search)
+            if text_ev.get('precise_timestamp'):
+                precise = text_ev['precise_timestamp']
+                print(f"      🎯 Precise timestamp: {precise[0]:.2f}s - {precise[1]:.2f}s")
+            
             snippet = text_ev['text'][:200] + "..." if len(text_ev['text']) > 200 else text_ev['text']
             print(f"      {snippet}")
+            
             if text_ev.get('entities'):
                 entities_str = ", ".join([ent[0] if isinstance(ent, (list, tuple)) else str(ent)
                                          for ent in text_ev['entities'][:5]])
                 print(f"      Medical Entities: {entities_str}")
+            
+            # Show coverage info if available
+            window_info = text_ev.get('window_info', {})
+            if window_info and window_info.get('coverage_contribution'):
+                print(f"      Coverage: {window_info.get('coverage_contribution')} new tokens (window: {window_info.get('start_token')}-{window_info.get('end_token')})")
 
         # Show visual evidence
         if ctx["visual_evidence"]:
             vis_ev = ctx["visual_evidence"]
             print(f"\n   🖼️  Visual Evidence (similarity: {vis_ev['similarity']:.4f}):")
             print(f"      Frames averaged: {vis_ev['num_frames']}")
+
+            # Display hyperparameters for analysis (useful during tuning)
+            if 'sampling_strategy' in vis_ev or 'aggregation_method' in vis_ev:
+                strategy = vis_ev.get('sampling_strategy', 'N/A')
+                aggregation = vis_ev.get('aggregation_method', 'N/A')
+                print(f"      Hyperparameters: {strategy} sampling, {aggregation} aggregation")
 
         print("-" * 100)
 
@@ -578,6 +667,10 @@ def main():
     parser.add_argument("--top_videos", type=int, default=5, help="Number of top videos to return in video aggregation mode (default: 5)")
     parser.add_argument("--text_weight", type=float, default=0.6, help="Weight for textual similarity in video aggregation (default: 0.6)")
     parser.add_argument("--visual_weight", type=float, default=0.4, help="Weight for visual similarity in video aggregation (default: 0.4)")
+    parser.add_argument("--filter_sampling", type=str, default=None, choices=["uniform", "adaptive", "quality_based"], help="Filter results by sampling strategy (optional)")
+    parser.add_argument("--filter_aggregation", type=str, default=None, choices=["mean", "max"], help="Filter results by aggregation method (optional)")
+    parser.add_argument("--hierarchical", action="store_true", help="Enable hierarchical search with fine-grained timestamp refinement")
+    parser.add_argument("--json_dir", type=str, default="feature_extraction/textual/demo", help="Directory containing JSON feature files for hierarchical search")
     args = parser.parse_args()
 
     # If query not provided, prompt the user
@@ -657,6 +750,14 @@ def main():
     for item in visual_pool:
         dist = item.get("raw_score", float('inf'))
         sim = 1.0 / (1.0 + dist) if np.isfinite(dist) else 0.0
+
+        # Optional: Filter by hyperparameters (useful for comparing experiments)
+        meta = item.get("meta", {}) or {}
+        if args.filter_sampling and meta.get("sampling_strategy") != args.filter_sampling:
+            continue
+        if args.filter_aggregation and meta.get("aggregation_method") != args.filter_aggregation:
+            continue
+
         combined.append({
             "sim": sim,
             "meta": item.get("meta"),
@@ -691,7 +792,9 @@ def main():
             visual_pool,
             top_k=args.final_k,
             text_weight=args.text_weight,
-            visual_weight=args.visual_weight
+            visual_weight=args.visual_weight,
+            enable_hierarchical=args.hierarchical,
+            json_dir=args.json_dir if args.hierarchical else None
         )
 
         print_segment_results(segment_contexts, query=args.query)

@@ -103,7 +103,7 @@ class FaissDB:
             results_file: name of the file to save results (default: "search_results.json")
 
         Returns:
-            List of dictionaries with 'score' and 'meta' keys, sorted by score (descending)
+            List of dictionaries with 'distance' and 'metadata' keys, sorted by distance (ascending)
         """
         # query_vec should be 1D numpy array
         q = query_vec.astype(np.float32)
@@ -120,13 +120,13 @@ class FaissDB:
         results = []
         for dist, idx in zip(D[0], I[0]):
             if idx < 0 or idx >= len(self.metadata):
-                results.append({"score": float(dist), "meta": None})
+                results.append({"distance": float(dist), "metadata": None})
             else:
                 result_meta = self.metadata[idx].copy() if self.metadata[idx] else None
-                results.append({"score": float(dist), "meta": result_meta})
+                results.append({"distance": float(dist), "metadata": result_meta})
 
-        # Sort by score (higher scores first for similarity)
-        sorted_results = sorted(results, key=lambda x: x["score"], reverse=True)
+        # Sort by distance (lower is better for L2 distance)
+        sorted_results = sorted(results, key=lambda x: x["distance"])
 
         # Use _to_serializable to ensure all numpy arrays are converted to lists
         serializable_results = _to_serializable(sorted_results)

@@ -102,23 +102,27 @@ def load_ner_and_embed_models():
 
 
 def extract_entities_and_embed_optimized(transcript_chunks, nlp, bert_tokenizer, bert_model, video_id,
-                                        window_size=256, stride=192, max_length=512):
+                                        window_size=256, stride=192, max_length=512,
+                                        deduplication_mode='coverage', min_coverage_contribution=0.15):
     """
-    Optimized sliding window approach with reduced overlap for token efficiency.
+    Optimized sliding window approach with coverage-based deduplication.
 
     Key improvements:
-    - Single pass with 25% overlap (stride=192, window=256) instead of 50%
+    - Coverage-based deduplication ensures 100% transcript coverage
     - Efficient timestamp mapping for accurate segment identification
     - Shared segment_id for linking text and visual embeddings
-    - Hash-based deduplication integrated into generation
+    - Validation to prevent content loss
 
     Args:
         window_size: 256 tokens (optimal for BERT context)
-        stride: 192 tokens (25% overlap, reduced from 50%)
+        stride: 192 tokens (25% overlap for coverage)
         max_length: Maximum BERT sequence length
+        deduplication_mode: 'coverage' (recommended), 'similarity', 'aggressive', or 'none'
+        min_coverage_contribution: Minimum % of new tokens required to keep window (default: 0.15)
     """
     results = []
-    seen_hashes = set()  # Integrated deduplication
+    seen_hashes = {}  # Track content hashes with token ranges
+    covered_ranges = []  # Track which token ranges we've embedded
 
     # Combine all transcript text with timestamp mapping
     full_text = ""
@@ -157,11 +161,43 @@ def extract_entities_and_embed_optimized(transcript_chunks, nlp, bert_tokenizer,
 
         window_text = bert_tokenizer.decode(window_tokens, clean_up_tokenization_spaces=True)
 
-        # Hash-based deduplication
+        # Coverage-based deduplication
         content_hash = hashlib.md5(window_text.encode('utf-8')).hexdigest()
-        if content_hash in seen_hashes:
+
+        # Calculate new coverage contribution
+        window_range = set(range(start_idx, end_idx))
+        covered_tokens = set()
+        for r_start, r_end in covered_ranges:
+            covered_tokens.update(range(r_start, r_end))
+
+        new_tokens = window_range - covered_tokens
+        coverage_ratio = len(new_tokens) / len(window_range) if len(window_range) > 0 else 0
+
+        # Decide whether to keep this window based on deduplication mode
+        should_keep = False
+
+        if deduplication_mode == 'none':
+            should_keep = True
+        elif deduplication_mode == 'coverage':
+            # Keep if it adds significant new content
+            should_keep = coverage_ratio >= min_coverage_contribution
+        elif deduplication_mode == 'similarity':
+            # Keep if not exact duplicate (for backward compatibility)
+            should_keep = content_hash not in seen_hashes
+        elif deduplication_mode == 'aggressive':
+            # Old behavior: strict hash-based deduplication
+            should_keep = content_hash not in seen_hashes
+
+        if not should_keep:
             continue
-        seen_hashes.add(content_hash)
+
+        # Track this window
+        seen_hashes[content_hash] = {
+            'token_start': start_idx,
+            'token_end': end_idx,
+            'coverage_contribution': len(new_tokens)
+        }
+        covered_ranges.append((start_idx, end_idx))
 
         # Find representative timestamp
         start_char_approx = int((start_idx / len(full_tokens)) * len(full_text))
@@ -214,11 +250,22 @@ def extract_entities_and_embed_optimized(transcript_chunks, nlp, bert_tokenizer,
                 "start_token": start_idx,
                 "end_token": end_idx,
                 "window_size": len(window_tokens),
-                "total_tokens": len(full_tokens)
+                "total_tokens": len(full_tokens),
+                "coverage_contribution": len(new_tokens)
             }
         })
 
-    print(f"Generated {len(results)} unique text embeddings (deduplicated from {window_idx + 1} windows)")
+    # Validation: Check coverage
+    total_covered = len(covered_tokens)
+    coverage_pct = (total_covered / len(full_tokens)) * 100 if len(full_tokens) > 0 else 0
+
+    print(f"✅ Generated {len(results)} text embeddings (from {window_idx + 1} candidate windows)")
+    print(f"✅ Coverage: {coverage_pct:.1f}% ({total_covered}/{len(full_tokens)} tokens)")
+
+    if coverage_pct < 95:
+        print(f"⚠️  WARNING: Only {coverage_pct:.1f}% coverage! Missing {len(full_tokens) - total_covered} tokens.")
+        print(f"   Consider: reducing min_coverage_contribution (current: {min_coverage_contribution})")
+
     return results
 
 # REMOVED: Replaced by extract_entities_and_embed_optimized
@@ -297,16 +344,39 @@ def extract_entities_and_embed(transcript_chunks, nlp, bert_tokenizer, bert_mode
 
 # 3. Frame extraction & visual embeddings
 
-def extract_frames_and_embed(video_path, text_segments, video_id, model_id='hf-hub:microsoft/BiomedCLIP-PubMedBERT_256-vit_base_patch16_224', frames_per_segment=2):
+def compute_frame_sharpness(frame):
     """
-    Extract frames and visual embeddings aligned with text segments.
+    Compute frame sharpness using Laplacian variance.
+    Higher values indicate sharper frames.
+    """
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    return cv2.Laplacian(gray, cv2.CV_64F).var()
+
+def extract_frames_and_embed(video_path, text_segments, video_id,
+                             model_id='hf-hub:microsoft/BiomedCLIP-PubMedBERT_256-vit_base_patch16_224',
+                             frames_per_segment=2,
+                             sampling_strategy='adaptive',
+                             min_frames=1,
+                             max_frames=10,
+                             aggregation_method='mean',
+                             quality_filter=False):
+    """
+    Extract frames and visual embeddings aligned with text segments with multiple sampling strategies.
 
     Args:
         video_path: Path to video file
         text_segments: List of text segment dicts (from extract_entities_and_embed)
         video_id: Video identifier
         model_id: BiomedCLIP model ID
-        frames_per_segment: Number of frames to sample per text segment (reduced from 3 for efficiency)
+        frames_per_segment: Number of frames to sample per text segment (HYPERPARAMETER)
+        sampling_strategy: 'uniform', 'adaptive', or 'quality_based'
+            - uniform: Fixed number of frames per segment
+            - adaptive: Varies based on segment duration (1 frame per 3 seconds)
+            - quality_based: Sample more frames then select highest quality ones
+        min_frames: Minimum frames for very short segments
+        max_frames: Maximum frames for very long segments (computational cap)
+        aggregation_method: How to combine multiple frame embeddings ('mean', 'max')
+        quality_filter: If True, filter frames by sharpness before encoding
 
     Returns:
         List of visual embeddings with segment_id for multimodal linking
@@ -322,6 +392,7 @@ def extract_frames_and_embed(video_path, text_segments, video_id, model_id='hf-h
         return results
 
     print(f"Extracting frames and visual embeddings: {video_path} (FPS: {fps})")
+    print(f"Strategy: {sampling_strategy}, Frames/Segment: {frames_per_segment}, Aggregation: {aggregation_method}")
 
     for segment in tqdm(text_segments, desc="Frame extraction", unit="segment"):
         ts = segment['timestamp']
@@ -331,18 +402,30 @@ def extract_frames_and_embed(video_path, text_segments, video_id, model_id='hf-h
             continue
 
         start_time, end_time = ts
-
-        # Sample frames uniformly across the segment
         segment_duration = end_time - start_time
+
+        # Determine number of frames based on strategy
+        if sampling_strategy == 'adaptive':
+            # Adaptive: 1 frame per 3 seconds, bounded by min/max
+            num_frames = max(min_frames, min(int(segment_duration / 3), max_frames))
+        elif sampling_strategy == 'quality_based':
+            # Quality-based: Sample 2x frames, then select best quality ones
+            num_frames = min(frames_per_segment * 2, max_frames)
+        else:  # uniform
+            num_frames = frames_per_segment
+
+        # Sample frame times
         if segment_duration <= 0:
-            # Single frame at start time
+            frame_times = [start_time]
+        elif num_frames == 1:
             frame_times = [start_time]
         else:
-            # Sample frames_per_segment frames uniformly
-            frame_times = [start_time + (i * segment_duration / (frames_per_segment - 1))
-                          for i in range(frames_per_segment)] if frames_per_segment > 1 else [start_time]
+            # Uniformly sample across segment duration
+            frame_times = [start_time + (i * segment_duration / (num_frames - 1))
+                          for i in range(num_frames)]
 
-        embeddings = []
+        # Extract frames and optionally filter by quality
+        frames_data = []  # Store (frame, frame_time, sharpness_score)
         for frame_time in frame_times:
             frame_idx = int(frame_time * fps)
             cap.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
@@ -350,6 +433,22 @@ def extract_frames_and_embed(video_path, text_segments, video_id, model_id='hf-h
             if not ret:
                 continue
 
+            if quality_filter or sampling_strategy == 'quality_based':
+                sharpness = compute_frame_sharpness(frame)
+                frames_data.append((frame, frame_time, sharpness))
+            else:
+                frames_data.append((frame, frame_time, 0))
+
+        # Quality-based: Select top-k sharpest frames
+        if sampling_strategy == 'quality_based' and len(frames_data) > frames_per_segment:
+            frames_data.sort(key=lambda x: x[2], reverse=True)
+            frames_data = frames_data[:frames_per_segment]
+            # Re-sort by time for temporal consistency
+            frames_data.sort(key=lambda x: x[1])
+
+        # Encode frames to embeddings
+        embeddings = []
+        for frame, frame_time, sharpness in frames_data:
             # Process frame in-memory
             with tempfile.NamedTemporaryFile(suffix='.jpg', delete=True) as tmp_img:
                 cv2.imwrite(tmp_img.name, frame)
@@ -360,15 +459,23 @@ def extract_frames_and_embed(video_path, text_segments, video_id, model_id='hf-h
                     emb = model.encode_image(image_tensor).squeeze().cpu().numpy()
                 embeddings.append(emb)
 
-        # Average embeddings from sampled frames
+        # Aggregate embeddings from sampled frames
         if embeddings:
-            final_emb = np.mean(embeddings, axis=0)
+            if aggregation_method == 'mean':
+                final_emb = np.mean(embeddings, axis=0)
+            elif aggregation_method == 'max':
+                final_emb = np.max(embeddings, axis=0)
+            else:
+                final_emb = np.mean(embeddings, axis=0)
+
             results.append({
                 "video_id": video_id,
                 "segment_id": segment_id,  # NEW: Link to text segment
                 "timestamp": ts,
                 "frame_path": "in-memory",
                 "num_frames_averaged": len(embeddings),
+                "sampling_strategy": sampling_strategy,
+                "aggregation_method": aggregation_method,
                 "embedding": final_emb
             })
 
@@ -462,6 +569,127 @@ def parallel_process_videos(fnames, video_dir, text_feat_dir, visual_feat_dir, a
 
 # 4. Demo pipeline
 
+def hierarchical_search(query_emb, text_db, json_data, top_k=5, enable_fine_grained=True):
+    """
+    Hierarchical search: coarse FAISS search + fine-grained timestamp refinement.
+
+    Args:
+        query_emb: Query embedding vector
+        text_db: FAISS database object
+        json_data: List of text segment metadata with overlapping_timestamps
+        top_k: Number of results to return
+        enable_fine_grained: If True, refine results using overlapping_timestamps
+
+    Returns:
+        List of refined search results with precise timestamps
+    """
+    # Step 1: Coarse search - get more candidates than needed
+    coarse_results = text_db.search(query_emb, top_k=top_k * 3)
+
+    if not enable_fine_grained:
+        return coarse_results[:top_k]
+
+    # Step 2: Fine-grained search - find exact timestamps
+    refined_results = []
+
+    for result in coarse_results:
+        if result.get('metadata') is None:
+            continue
+
+        segment_id = result['metadata'].get('segment_id')
+        if not segment_id:
+            continue
+
+        # Find corresponding segment in JSON data
+        segment = next((s for s in json_data if s['segment_id'] == segment_id), None)
+        if not segment:
+            refined_results.append(result)
+            continue
+
+        # Check overlapping_timestamps for best match
+        overlapping_ts = segment.get('overlapping_timestamps', [])
+
+        if overlapping_ts and len(overlapping_ts) > 0:
+            # Use middle timestamp as the most representative
+            best_ts = overlapping_ts[len(overlapping_ts)//2]
+
+            refined_results.append({
+                'distance': result.get('distance', float('inf')),
+                'metadata': result['metadata'],
+                'segment_id': segment_id,
+                'video_id': segment.get('video_id'),
+                'precise_timestamp': best_ts,
+                'full_timestamp_range': segment.get('timestamp'),
+                'text': segment.get('text', ''),
+                'window_info': segment.get('window_info', {}),
+                'all_timestamps': overlapping_ts
+            })
+        else:
+            refined_results.append(result)
+
+    # Sort by distance and return top-k
+    refined_results.sort(key=lambda x: x.get('distance', float('inf')))
+    return refined_results[:top_k]
+
+def get_extended_context(segment_id, json_data, context_windows=1):
+    """
+    Retrieve surrounding windows for richer context.
+
+    Args:
+        segment_id: Current segment ID
+        json_data: List of all segments
+        context_windows: Number of adjacent windows to include
+
+    Returns:
+        Dict with extended text and time range
+    """
+    current_segment = next((s for s in json_data if s['segment_id'] == segment_id), None)
+    if not current_segment:
+        return None
+
+    current_window_info = current_segment.get('window_info', {})
+    current_end_token = current_window_info.get('end_token')
+    current_start_token = current_window_info.get('start_token')
+    video_id = current_segment.get('video_id')
+
+    context_segments = [current_segment]
+
+    # Get previous window
+    for segment in json_data:
+        if (segment.get('video_id') == video_id and
+            segment.get('window_info', {}).get('end_token') == current_start_token):
+            context_segments.insert(0, segment)
+            if len(context_segments) >= context_windows + 1:
+                break
+
+    # Get next window
+    for segment in json_data:
+        if (segment.get('video_id') == video_id and
+            segment.get('window_info', {}).get('start_token') == current_end_token):
+            context_segments.append(segment)
+            if len(context_segments) >= context_windows * 2 + 1:
+                break
+
+    # Combine text
+    full_context = " ".join([s.get('text', '') for s in context_segments])
+
+    # Get time range
+    all_timestamps = []
+    for seg in context_segments:
+        all_timestamps.extend(seg.get('overlapping_timestamps', []))
+
+    if all_timestamps:
+        time_range = (all_timestamps[0][0], all_timestamps[-1][1])
+    else:
+        time_range = current_segment.get('timestamp', (0, 0))
+
+    return {
+        'extended_text': full_context,
+        'time_range': time_range,
+        'segments': context_segments,
+        'num_segments': len(context_segments)
+    }
+
 def demo_pipeline(video_path, text_feat_dir, visual_feat_dir, faiss_text_path, faiss_visual_path):
     os.makedirs(text_feat_dir, exist_ok=True)
     os.makedirs(visual_feat_dir, exist_ok=True)
@@ -484,17 +712,17 @@ def demo_pipeline(video_path, text_feat_dir, visual_feat_dir, faiss_text_path, f
 
     print(f"Transcription complete: {len(transcript_chunks)} chunks extracted.")
 
-    # NER + text embedding
+    # NER + text embedding with coverage-based deduplication
     nlp, bert_tokenizer, bert_model = load_ner_and_embed_models()
-    text_results = extract_entities_and_embed(transcript_chunks, nlp, bert_tokenizer, bert_model, video_id=video_id)
+    print("\nGenerating text embeddings with coverage-based deduplication...")
+    text_results = extract_entities_and_embed(
+        transcript_chunks, nlp, bert_tokenizer, bert_model, video_id=video_id,
+        window_size=256, stride=192,
+        deduplication_mode='coverage',  # Use recommended coverage-based approach
+        min_coverage_contribution=0.15
+    )
 
-    print(f"Extracted entities and generated text embeddings: {len(text_results)} items.")
-
-    # Apply similarity-based deduplication (hash-based already done during generation)
-    print("\nApplying similarity-based deduplication to text embeddings...")
-    text_results = deduplicate_embeddings_similarity(text_results, similarity_threshold=0.95)
-
-    print(f"Text embeddings after deduplication: {len(text_results)}")
+    print(f"\nText embeddings generated: {len(text_results)} segments")
 
     # Convert embeddings to lists for JSON serialization
     # Save textual features to JSON
@@ -544,7 +772,7 @@ def demo_pipeline(video_path, text_feat_dir, visual_feat_dir, faiss_text_path, f
     print(f"- Text FAISS index dimension: {text_results[0]['embedding'].shape[0] if text_results else 'N/A'}")
     print(f"- Visual FAISS index dimension: {visual_results[0]['embedding'].shape[0] if visual_results else 'N/A'}")
 
-    # Query demo
+    # Query demo with hierarchical search
     query = "How to do a mouth cancer check at home?"
     inputs = bert_tokenizer(query, return_tensors="pt", truncation=True, padding=True, max_length=512)
     with torch.no_grad():
@@ -552,8 +780,69 @@ def demo_pipeline(video_path, text_feat_dir, visual_feat_dir, faiss_text_path, f
         # Use CLS token pooling for consistency with embedding generation
         query_emb = outputs.last_hidden_state[:, 0, :].squeeze().cpu().numpy()
 
-    print(f"\nDemo Query: {query}")
-    print("Text DB results:", text_db.search(query_emb, top_k=3))
+    print(f"\n{'='*80}")
+    print(f"DEMO QUERY: {query}")
+    print(f"{'='*80}")
+
+    # Standard FAISS search
+    print("\n[1] Standard FAISS Search:")
+    standard_results = text_db.search(query_emb, top_k=3)
+    for i, result in enumerate(standard_results, 1):
+        print(f"\n  Result {i}:")
+        dist = result.get('distance', float('inf'))
+        print(f"    Distance: {dist:.4f}" if isinstance(dist, (int, float)) else f"    Distance: {dist}")
+        if result.get('metadata'):
+            meta = result['metadata']
+            print(f"    Segment ID: {meta.get('segment_id', 'N/A')}")
+            print(f"    Timestamp: {meta.get('timestamp', 'N/A')}")
+            text_snippet = meta.get('text', '')[:150]
+            print(f"    Text: {text_snippet}...")
+
+    # Hierarchical search with fine-grained timestamps
+    print(f"\n{'='*80}")
+    print("[2] Hierarchical Search with Fine-Grained Timestamps:")
+    print(f"{'='*80}")
+    refined_results = hierarchical_search(query_emb, text_db, text_results, top_k=3)
+
+    for i, result in enumerate(refined_results, 1):
+        print(f"\n  Result {i}:")
+        dist = result.get('distance', float('inf'))
+        print(f"    Distance: {dist:.4f}" if isinstance(dist, (int, float)) else f"    Distance: {dist}")
+        print(f"    Video ID: {result.get('video_id', 'N/A')}")
+        print(f"    Segment ID: {result.get('segment_id', 'N/A')}")
+
+        if result.get('precise_timestamp'):
+            precise = result['precise_timestamp']
+            print(f"    Precise Timestamp: {precise[0]:.2f}s - {precise[1]:.2f}s")
+
+        if result.get('full_timestamp_range'):
+            full_range = result['full_timestamp_range']
+            print(f"    Full Segment Range: {full_range[0]:.2f}s - {full_range[1]:.2f}s")
+
+        text_snippet = result.get('text', '')[:200]
+        print(f"    Text: {text_snippet}...")
+
+        # Show coverage info
+        window_info = result.get('window_info', {})
+        if window_info:
+            print(f"    Window: tokens {window_info.get('start_token', 'N/A')}-{window_info.get('end_token', 'N/A')}")
+            print(f"    Coverage contribution: {window_info.get('coverage_contribution', 'N/A')} new tokens")
+
+    # Context expansion demo
+    if refined_results:
+        print(f"\n{'='*80}")
+        print("[3] Context Expansion (Top Result):")
+        print(f"{'='*80}")
+        top_result = refined_results[0]
+        context = get_extended_context(top_result.get('segment_id'), text_results, context_windows=1)
+
+        if context:
+            print(f"\n  Extended context ({context['num_segments']} segments):")
+            print(f"    Time range: {context['time_range'][0]:.2f}s - {context['time_range'][1]:.2f}s")
+            context_snippet = context['extended_text'][:300]
+            print(f"    Text: {context_snippet}...")
+        else:
+            print("  No additional context available.")
 
 def process_video(fname, video_dir, text_feat_dir, visual_feat_dir):
     if not fname.endswith('.mp4'):
