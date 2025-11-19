@@ -535,15 +535,44 @@ def process_video_batch(batch_fnames, video_dir, text_feat_dir, visual_feat_dir,
             elif torch.backends.mps.is_available():
                 torch.mps.empty_cache()
             gc.collect()
+
+            print(f"\nProcessing {fname}...")
             transcript_chunks = transcribe_with_asr(video_path, asr_model_id)
+            print(f"Transcription complete: {len(transcript_chunks)} chunks extracted.")
+
             nlp, bert_tokenizer, bert_model = load_ner_and_embed_models()
-            text_results = extract_entities_and_embed(transcript_chunks, nlp, bert_tokenizer, bert_model, video_id=video_id)
+
+            # Use enhanced extraction with coverage-based deduplication
+            print("Generating text embeddings with coverage-based deduplication...")
+            text_results = extract_entities_and_embed(
+                transcript_chunks, nlp, bert_tokenizer, bert_model, video_id=video_id,
+                window_size=256, stride=192,
+                deduplication_mode='coverage',
+                min_coverage_contribution=0.15
+            )
+            print(f"Text embeddings generated: {len(text_results)} segments")
+
             visual_results = extract_frames_and_embed(video_path, text_results, video_id=video_id)
+            print(f"Generated visual embeddings: {len(visual_results)} items.")
+
+            # Apply similarity-based deduplication to visual embeddings
+            print("Applying similarity-based deduplication to visual embeddings...")
+            visual_results = deduplicate_embeddings_similarity(visual_results, similarity_threshold=0.98)
+            print(f"Visual embeddings after deduplication: {len(visual_results)}")
+
             # Delegate saving to FAISS storage helper
             try:
                 save_video_features(video_id, text_results, visual_results, text_feat_dir, visual_feat_dir)
             except Exception:
                 pass
+
+            # Enhanced logging
+            print(f"\nResults Summary for {video_id}:")
+            print(f"  - Text embeddings: {len(text_results)}")
+            print(f"  - Visual embeddings: {len(visual_results)}")
+            print(f"  - Text dim: {text_results[0]['embedding'].shape[0] if text_results else 'N/A'}")
+            print(f"  - Visual dim: {visual_results[0]['embedding'].shape[0] if visual_results else 'N/A'}")
+
             text_embs = [r['embedding'] for r in text_results]
             text_meta = [{"video_id": video_id, **r} for r in text_results]
             visual_embs = [r['embedding'] for r in visual_results]
@@ -789,14 +818,28 @@ def process_video(fname, video_dir, text_feat_dir, visual_feat_dir):
     if os.path.exists(text_json_path) and os.path.exists(visual_json_path):
         print(f"[SKIP] {fname}: Both text and visual JSONs exist.")
         return None, None
+
     # Each thread loads its own models
     nlp, bert_tokenizer, bert_model = load_ner_and_embed_models()
+
     try:
+        print(f"\nProcessing {fname}...")
         transcript_chunks = transcribe_with_asr(video_path)
+        print(f"Transcription complete: {len(transcript_chunks)} chunks extracted.")
     except Exception as e:
         print(f"ASR failed for {video_path}: {e}")
         return None, None
-    text_results = extract_entities_and_embed(transcript_chunks, nlp, bert_tokenizer, bert_model, video_id=video_id)
+
+    # Use enhanced extraction with coverage-based deduplication
+    print("Generating text embeddings with coverage-based deduplication...")
+    text_results = extract_entities_and_embed(
+        transcript_chunks, nlp, bert_tokenizer, bert_model, video_id=video_id,
+        window_size=256, stride=192,
+        deduplication_mode='coverage',
+        min_coverage_contribution=0.15
+    )
+    print(f"Text embeddings generated: {len(text_results)} segments")
+
     # Convert embeddings to lists for JSON serialization
     text_results_serializable = []
     for r in text_results:
@@ -808,7 +851,15 @@ def process_video(fname, video_dir, text_feat_dir, visual_feat_dir):
         json.dump(text_results_serializable, f)
     text_embs = [r['embedding'] for r in text_results]
     text_meta = [{"video_id": video_id, **r} for r in text_results]
+
     visual_results = extract_frames_and_embed(video_path, text_results, video_id=video_id)
+    print(f"Generated visual embeddings: {len(visual_results)} items.")
+
+    # Apply similarity-based deduplication to visual embeddings
+    print("Applying similarity-based deduplication to visual embeddings...")
+    visual_results = deduplicate_embeddings_similarity(visual_results, similarity_threshold=0.98)
+    print(f"Visual embeddings after deduplication: {len(visual_results)}")
+
     # Convert embeddings to lists for JSON serialization
     visual_results_serializable = []
     for r in visual_results:
@@ -820,6 +871,14 @@ def process_video(fname, video_dir, text_feat_dir, visual_feat_dir):
         json.dump(visual_results_serializable, f)
     visual_embs = [r['embedding'] for r in visual_results]
     visual_meta = [{"video_id": video_id, **r} for r in visual_results]
+
+    # Enhanced logging
+    print(f"\nResults Summary for {video_id}:")
+    print(f"  - Text embeddings: {len(text_results)}")
+    print(f"  - Visual embeddings: {len(visual_results)}")
+    print(f"  - Text dim: {text_results[0]['embedding'].shape[0] if text_results else 'N/A'}")
+    print(f"  - Visual dim: {visual_results[0]['embedding'].shape[0] if visual_results else 'N/A'}")
+
     return (text_embs, text_meta), (visual_embs, visual_meta)
 
 
@@ -891,35 +950,35 @@ def main():
     # Test mode for a single video
     # test_single_video("videos_train/_6csIJAWj_s.mp4", "feature_extraction/textual/test_single", "feature_extraction/visual/test_single")
 
-    # Test demo pipeline
-    demo_pipeline(
-        video_path="videos_train/_6csIJAWj_s.mp4",
-        text_feat_dir="feature_extraction/textual/demo",
-        visual_feat_dir="feature_extraction/visual/demo",
-        faiss_text_path="faiss_db/textual_demo.index",
-        faiss_visual_path="faiss_db/visual_demo.index")
+    # # Test demo pipeline
+    # demo_pipeline(
+    #     video_path="videos_train/_6csIJAWj_s.mp4",
+    #     text_feat_dir="feature_extraction/textual/demo",
+    #     visual_feat_dir="feature_extraction/visual/demo",
+    #     faiss_text_path="faiss_db/textual_demo.index",
+    #     faiss_visual_path="faiss_db/visual_demo.index")
 
   # Uncomment above and set your video path to test single video or run a demo pipeline
-#   splits = [
-#     ("train", "videos_train"),
-#     ("val", "videos_val"),
-#     ("test", "videos_test")
-#   ]
+  splits = [
+    ("train", "videos_train"),
+    ("val", "videos_val"),
+    ("test", "videos_test")
+  ]
 
-#   for split, video_dir in splits:
-#       print(f"Processing split: {split}")
-#       process_split(
-#           split=split,
-#           video_dir=video_dir,
-#           text_feat_dir=f"feature_extraction/textual/{split}",
-#           visual_feat_dir=f"feature_extraction/visual/{split}",
-#           faiss_text_path=f"faiss_db/textual_{split}.index",
-#           faiss_visual_path=f"faiss_db/visual_{split}.index"
-#       )
+  for split, video_dir in splits:
+      print(f"Processing split: {split}")
+      process_split(
+          split=split,
+          video_dir=video_dir,
+          text_feat_dir=f"feature_extraction/textual/{split}",
+          visual_feat_dir=f"feature_extraction/visual/{split}",
+          faiss_text_path=f"faiss_db/textual_{split}.index",
+          faiss_visual_path=f"faiss_db/visual_{split}.index"
+      )
 
-#   # After all splits are processed, filter JSON files based on available embeddings
-#   print("\nFiltering JSON files to keep only entries with both textual and visual embeddings...")
-#   filter_json_by_embeddings(model_name="openai/whisper-tiny")
+  # After all splits are processed, filter JSON files based on available embeddings
+  print("\nFiltering JSON files to keep only entries with both textual and visual embeddings...")
+  filter_json_by_embeddings(model_name="openai/whisper-tiny")
 
 if __name__ == "__main__":
     main()

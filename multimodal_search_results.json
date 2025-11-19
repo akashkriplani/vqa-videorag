@@ -1,192 +1,356 @@
 {
-  "query": "How to do a mouth cancer check at home?",
-  "total_segments": 2,
+  "query": "How to set the range of motion of the brace of T Scope post-op knee braces?",
+  "total_segments": 10,
   "aggregation_mode": "segment",
   "results": [
     {
-      "video_id": "_6csIJAWj_s",
-      "segment_id": "_6csIJAWj_s_seg_1",
+      "video_id": "_1NofulQlHs",
+      "segment_id": "_1NofulQlHs_seg_0",
       "timestamp": [
-        90.04,
-        93.04
+        22.4,
+        25.6
       ],
       "text_evidence": {
-        "text": "lump or an ulcer that has lasted for longer than three weeks. make sure to check both sides and underneath. next, run your finger along the inside of both your cheeks. are there any lumps or bumps? again, can you see any red or white patches? all clear? great. now you should check the roof of your mouth. it can be tricky to get the right angle and you will need to tilt your head back slightly. also run your finger along the roof of your mouth to check for any lumps or spine. finally you should then check your lips. simply use your thumb and index fingers to pull down your lip and check for any red or white patches or lumps. do this for both the top and bottom lip. that's our step - by - step guide to performing a simple math cancer check at home. most likely you won't find anything, but if you do spot something while you're doing your check that doesn't seem quite right, make sure to book an appointment with your dentist or doctor. be math where and if in doubt get checked out. for more information about mask cancer, or to find out more about our mask cancer action month campaign, head to www. mascancer. org",
+        "text": "hi, i'm martha murray, and i'm one of the orthopedic surgeons here at children's hospital boston. this is elizabeth beck, one of our physicians assistants, and we're going to go through with you today how to adjust your post operative brace. the brace we're going to show you today is made by bragg, it's called the t - scope brace. it has two hinges, one on either side, and it's held together with four straps. we're going to show you a little bit about how to put it together. most of this work we will have done for you in the operating room, so you'll wake up with the brace adjusted, but sometimes when you get home, you'll need to do some of these adjustments as well, we'll show you those specific adjustments you'll likely need to do at home. but what we do in the operating room while you're still asleep is we're going to adjust first the hinges to the right length. for most people it means setting the bar at about the number one and then we can clip down these clips to make sure that it's secure in",
         "entities": [],
-        "similarity": 0.7241981410977386,
-        "raw_distance": 0.3226902484893799,
-        "window_info": {
-          "start_token": 192,
-          "end_token": 448,
-          "window_size": 256,
-          "total_tokens": 449,
-          "coverage_contribution": 192
-        },
-        "precise_timestamp": [
-          90.04,
-          93.04
-        ],
-        "all_timestamps": [
-          [
-            47.2,
-            51.2
-          ],
-          [
-            51.92,
-            58.08
-          ],
-          [
-            58.08,
-            62.72
-          ],
-          [
-            63.92,
-            69.44
-          ],
-          [
-            69.44,
-            73.76
-          ],
-          [
-            73.76,
-            85.04
-          ],
-          [
-            85.04,
-            90.04
-          ],
-          [
-            90.04,
-            93.04
-          ],
-          [
-            97.04,
-            101.04
-          ],
-          [
-            101.04,
-            107.04
-          ],
-          [
-            107.04,
-            110.04
-          ],
-          [
-            110.04,
-            113.04
-          ],
-          [
-            113.04,
-            116.76
-          ],
-          [
-            116.76,
-            120.04
-          ]
-        ]
-      },
-      "visual_evidence": {
-        "frame_info": "in-memory",
-        "num_frames": 1,
-        "similarity": 0.17658597755142294,
-        "raw_distance": 1.7339473962783813,
-        "sampling_strategy": "adaptive",
-        "aggregation_method": "mean"
-      },
-      "text_score": 0.7241981410977386,
-      "visual_score": 0.17658597755142294,
-      "combined_score": 0.5051532756792123,
-      "has_both_modalities": true
-    },
-    {
-      "video_id": "_6csIJAWj_s",
-      "segment_id": "_6csIJAWj_s_seg_0",
-      "timestamp": [
-        29.52,
-        36.48
-      ],
-      "text_evidence": {
-        "text": "hello. in this video, we're going to show you how to do a mouth - cance check. this simple check only takes 45 seconds, however it could save your life. last year, 8, 722 adults in the uk were diagnosed with mouth cancer. that's an average of 1 every hour. the number of new cases is doubled in the last 20 years, or more people are losing their life to the disease and cervical cancer and to a particular cancer combined. the key to beating mouth cancer is spotting it quickly, so it's really important everybody knows what the early wanting signs are. without further ado, let's get into it. firstly, take a quick look at your face and have a feel for any unusual lump saw bumps around your head and neck. once that's clear, you can then start checking the inside of your mouth. check your tongue for any unusual red or white patch lump or an ulcer that has lasted for longer than three weeks. make sure to check both sides and underneath. next, run your finger along the inside of both your cheeks. are there any lumps or bumps? again, can you see any red or white patches? all clear? great. now you should check",
-        "entities": [],
-        "similarity": 0.6893474568385567,
-        "raw_distance": 0.37200984358787537,
+        "similarity": 0.6944987645952296,
+        "raw_distance": 0.3645648956298828,
         "window_info": {
           "start_token": 0,
           "end_token": 256,
           "window_size": 256,
-          "total_tokens": 449,
+          "total_tokens": 1971,
           "coverage_contribution": 256
         },
-        "precise_timestamp": [
-          29.52,
-          36.48
-        ],
-        "all_timestamps": [
-          [
-            0.0,
-            5.36
-          ],
-          [
-            5.36,
-            11.6
-          ],
-          [
-            11.6,
-            16.88
-          ],
-          [
-            16.88,
-            20.72
-          ],
-          [
-            20.72,
-            26.08
-          ],
-          [
-            26.08,
-            29.52
-          ],
-          [
-            29.52,
-            36.48
-          ],
-          [
-            36.48,
-            42.32
-          ],
-          [
-            42.32,
-            47.2
-          ],
-          [
-            47.2,
-            51.2
-          ],
-          [
-            51.92,
-            58.08
-          ],
-          [
-            58.08,
-            62.72
-          ],
-          [
-            63.92,
-            69.44
-          ]
-        ]
+        "precise_timestamp": null,
+        "all_timestamps": null
+      },
+      "visual_evidence": {
+        "frame_info": "in-memory",
+        "num_frames": 1,
+        "similarity": 0.22221935282590488,
+        "raw_distance": 1.5040903091430664,
+        "sampling_strategy": "adaptive",
+        "aggregation_method": "mean"
+      },
+      "text_score": 0.6944987645952296,
+      "visual_score": 0.22221935282590488,
+      "combined_score": 0.5055869998874998,
+      "has_both_modalities": true
+    },
+    {
+      "video_id": "_6VFqX5i4M8",
+      "segment_id": "_6VFqX5i4M8_seg_6",
+      "timestamp": [
+        336.38,
+        338.1
+      ],
+      "text_evidence": {
+        "text": "to put pressure on the wound, which we've already done by tying the knot on top of the clotting sponge, and now we're elevating the wound with whatever we can find in the environment. and if you still see that there's a lot of blood coming out, you're going to do a pressure point. and there is a picture on my instruction sheet about the different pressure points. and here it's going to be right underneath the knee. and michael, while we're we're also doing this before we run out of time. if somebody has one of these, i know we have multiple different kits that we can purchase, but where's a good place to keep one once we have it at home? frankly, you can keep it anywhere. in your backpack, if you're a student at school, at work, in your desk, in the car, okay. so now, we're gonna simulate that the blood loss is not stopping, so we're gonna put this string the hole there. we're not going to really tie it as tight as we play tonight. that's what you're like here, but you're going to tie",
+        "entities": [],
+        "similarity": 0.6827590154158922,
+        "raw_distance": 0.3816133141517639,
+        "window_info": {
+          "start_token": 1152,
+          "end_token": 1408,
+          "window_size": 256,
+          "total_tokens": 1561,
+          "coverage_contribution": 192
+        },
+        "precise_timestamp": null,
+        "all_timestamps": null
+      },
+      "visual_evidence": {
+        "frame_info": "in-memory",
+        "num_frames": 1,
+        "similarity": 0.23287188939394807,
+        "raw_distance": 1.4572668075561523,
+        "sampling_strategy": "adaptive",
+        "aggregation_method": "mean"
+      },
+      "text_score": 0.6827590154158922,
+      "visual_score": 0.23287188939394807,
+      "combined_score": 0.5028041650071146,
+      "has_both_modalities": true
+    },
+    {
+      "video_id": "_9Vy1QsZ7k0",
+      "segment_id": "_9Vy1QsZ7k0_seg_1",
+      "timestamp": [
+        102.74,
+        109.94
+      ],
+      "text_evidence": {
+        "text": "be exerting a lot of pressure on some of the patients'teeth. so again, take your two thumbs and place them on the patient's inferior molars and you might have to exert significant pressure as you pull the jaw down and posterior until you feel pop. another technique you might want to drive is allowing the patient to bite down on a syringe between their mullers, then ask the patient to rock that syringe back and forth. this will allow them to use their own musculature to do the same downward and posterior force and relocate the jaw. some patients may find it difficult to hold the syringe on just one side, so an alternate and technique is to allow them to bite down on both sides and roll the syringe. and that's how you reduce a tmj dislocation.",
+        "entities": [],
+        "similarity": 0.7145264891534394,
+        "raw_distance": 0.33613520860671997,
+        "window_info": {
+          "start_token": 192,
+          "end_token": 367,
+          "window_size": 175,
+          "total_tokens": 367,
+          "coverage_contribution": 111
+        },
+        "precise_timestamp": null,
+        "all_timestamps": null
       },
       "visual_evidence": {
         "frame_info": "in-memory",
         "num_frames": 2,
-        "similarity": 0.17627510128584634,
-        "raw_distance": 1.7357094287872314,
+        "similarity": 0.17239443275298202,
+        "raw_distance": 1.7579702138900757,
         "sampling_strategy": "adaptive",
         "aggregation_method": "mean"
       },
-      "text_score": 0.6893474568385567,
-      "visual_score": 0.17627510128584634,
-      "combined_score": 0.4841185146174726,
+      "text_score": 0.7145264891534394,
+      "visual_score": 0.17239443275298202,
+      "combined_score": 0.49767366659325646,
+      "has_both_modalities": true
+    },
+    {
+      "video_id": "_6VFqX5i4M8",
+      "segment_id": "_6VFqX5i4M8_seg_4",
+      "timestamp": [
+        226.3,
+        232.06
+      ],
+      "text_evidence": {
+        "text": "assist you by holding this, right? yes, yes. and i do notice michael that we have two clotting sponges and two dressings in the kit. why is that for multiple injuries? well, with bullet wounds, what some people don't think about is that there's going to be an entrance and an exit wound. oh, okay. so that's why we have two of each. each. yes. and so here i'm going to tie the knot on top of the wound to keep that pressure there. so now we're going to take out the second clotting sponge. and we're going to simulate that the azip wound was right there. if alex, if you can hold that in place, follow me if that's what happened. and now while we're doing both the entry and the exit wound, i know michael if the clotting and the dressing, we need something beyond that. still inside the kit, we have a turnicate correct? yes. now, i know you specifically chose a specific kind of turnicate for this. why was that? you'll see in just a little bit, it's",
+        "entities": [],
+        "similarity": 0.652654188290168,
+        "raw_distance": 0.4267078638076782,
+        "window_info": {
+          "start_token": 768,
+          "end_token": 1024,
+          "window_size": 256,
+          "total_tokens": 1561,
+          "coverage_contribution": 192
+        },
+        "precise_timestamp": null,
+        "all_timestamps": null
+      },
+      "visual_evidence": {
+        "frame_info": "in-memory",
+        "num_frames": 1,
+        "similarity": 0.2524242651362495,
+        "raw_distance": 1.3766440153121948,
+        "sampling_strategy": "adaptive",
+        "aggregation_method": "mean"
+      },
+      "text_score": 0.652654188290168,
+      "visual_score": 0.2524242651362495,
+      "combined_score": 0.49256221902860053,
+      "has_both_modalities": true
+    },
+    {
+      "video_id": "_9Vy1QsZ7k0",
+      "segment_id": "_9Vy1QsZ7k0_seg_0",
+      "timestamp": [
+        57.7,
+        58.9
+      ],
+      "text_evidence": {
+        "text": "oh, hi there. i'm alan guinea, and today i'm going to go over tmj dislocation and reduction. i'm working today with dr. sarah yee, who is behind the camera. in a temporal mandibular joint dislocation. so the head of the mandible is usually dislocated anteriorly from the mandibular fossa. and the standard reduction technique is to place your two thumbs on the patient's inferior mullers and exert downward and backward pressure to replace the joint. what you need to do is get the head of the mandible down and past the and tip anterior lip of the mandibular fossa. so you exert downward and backward pressure until you feel a pop. when you're doing this with a patient, i like to protect my thumbs with gauze, because you're gonna be exerting a lot of pressure on some of the patients'teeth. so again, take your two thumbs and place them on the patient's inferior molars and you might have to exert significant pressure as you pull the jaw down and posterior until you feel pop. another technique you might want to drive",
+        "entities": [],
+        "similarity": 0.7035156833226235,
+        "raw_distance": 0.35166510939598083,
+        "window_info": {
+          "start_token": 0,
+          "end_token": 256,
+          "window_size": 256,
+          "total_tokens": 367,
+          "coverage_contribution": 256
+        },
+        "precise_timestamp": null,
+        "all_timestamps": null
+      },
+      "visual_evidence": {
+        "frame_info": "in-memory",
+        "num_frames": 1,
+        "similarity": 0.175032072601409,
+        "raw_distance": 1.7427860498428345,
+        "sampling_strategy": "adaptive",
+        "aggregation_method": "mean"
+      },
+      "text_score": 0.7035156833226235,
+      "visual_score": 0.175032072601409,
+      "combined_score": 0.4921222390341377,
+      "has_both_modalities": true
+    },
+    {
+      "video_id": "-Zx3pWhMBjw",
+      "segment_id": "-Zx3pWhMBjw_seg_0",
+      "timestamp": [
+        23.32,
+        25.36
+      ],
+      "text_evidence": {
+        "text": "hi, i'm bob schrupp, physical therapist. we're at hayne, physical therapist. together we have the most famous physical therapist on the internet. and out of pain of course bob, this is napoleon, bonaparte, right? and today we're going to show you the single best treatment you could do for ac joint pain or a chromio - clovicular pain. so what are we talking about? that's a lot of service, isn't it, though? yeah. the clavicle is the collarbone, okay? so that's this right here. i'm actually leaning forward like that. yeah, that's right. yeah, how does that look? got the collar bone and it attaches to another bone right here, which is the acromion, and it forms a joint right there. the acromion is nothing more than part of the shoulder blade in the scapula. but this is the pain that we had on video, i'll probably put it up right here on how to test whether or not you are having acromion to ac joint pain. if it's positive, one of the",
+        "entities": [],
+        "similarity": 0.6862669845971698,
+        "raw_distance": 0.3764885365962982,
+        "window_info": {
+          "start_token": 0,
+          "end_token": 256,
+          "window_size": 256,
+          "total_tokens": 1099,
+          "coverage_contribution": 256
+        },
+        "precise_timestamp": null,
+        "all_timestamps": null
+      },
+      "visual_evidence": {
+        "frame_info": "in-memory",
+        "num_frames": 1,
+        "similarity": 0.19018185331616944,
+        "raw_distance": 1.6597745418548584,
+        "sampling_strategy": "adaptive",
+        "aggregation_method": "mean"
+      },
+      "text_score": 0.6862669845971698,
+      "visual_score": 0.19018185331616944,
+      "combined_score": 0.4878329320847697,
+      "has_both_modalities": true
+    },
+    {
+      "video_id": "_bZHLRfVYtU",
+      "segment_id": "_bZHLRfVYtU_seg_0",
+      "timestamp": [
+        35.48,
+        38.24
+      ],
+      "text_evidence": {
+        "text": "in this video, i'm going to show you how to self - release your upper back for instant pain relief stay tuned. hey everyone, dr. rowe coming to you from spinecare in st. joseph, michigan. if you're dealing with a tight, locked up, painful spot in the upper or middle back and need a self - release or mobilization, this is a video that you're not going to want to miss. i'm going to go over different exercises that are really going to help open up the upper back and give quick relief even in as little as 30 seconds. as a side note, these are not chiropractic adjustments. they don't serve to replace chiropractic adjustments. they're simply stretching exercises that may end in a satisfying self - pop crack or release. so let's get started and get the upper back feeling better right now. so here is an upper back opener that you can do in bed first thing in the morning or before you go to bed at night. i'm going to lay flat on my back just like this. let's take our hands, place them behind or head little bit of support. what i'm going to do",
+        "entities": [],
+        "similarity": 0.7042794213490573,
+        "raw_distance": 0.350580096244812,
+        "window_info": {
+          "start_token": 0,
+          "end_token": 256,
+          "window_size": 256,
+          "total_tokens": 3605,
+          "coverage_contribution": 256
+        },
+        "precise_timestamp": null,
+        "all_timestamps": null
+      },
+      "visual_evidence": {
+        "frame_info": "in-memory",
+        "num_frames": 1,
+        "similarity": 0.16290004807009165,
+        "raw_distance": 1.814618468284607,
+        "sampling_strategy": "adaptive",
+        "aggregation_method": "mean"
+      },
+      "text_score": 0.7042794213490573,
+      "visual_score": 0.16290004807009165,
+      "combined_score": 0.487727672037471,
+      "has_both_modalities": true
+    },
+    {
+      "video_id": "_1NofulQlHs",
+      "segment_id": "_1NofulQlHs_seg_1",
+      "timestamp": [
+        63.76,
+        66.08
+      ],
+      "text_evidence": {
+        "text": "do at home. but what we do in the operating room while you're still asleep is we're going to adjust first the hinges to the right length. for most people it means setting the bar at about the number one and then we can clip down these clips to make sure that it's secure in place. if you find that your brace is sliding like this, up and down, check to see if the clip has come unhooked. so you can just click it down like that and secure it again in place. and again, we are going to do all four of these at the number one position. so let's do the other side too. this makes sure that the two hinges are the same length and the length that you need for your surgery protection. the next thing we're going to do is we're going to set the range of motion of the brace. so the brace as it comes can have a very wide range of motion. for most of our patients, initially we're going to limit your motion to about 90 degrees of bending or flexion. so in order to do that, we're going to take these little triangular tabs and pull it out to release it. and then we can slide",
+        "entities": [],
+        "similarity": 0.6901510369590591,
+        "raw_distance": 0.3708448112010956,
+        "window_info": {
+          "start_token": 192,
+          "end_token": 448,
+          "window_size": 256,
+          "total_tokens": 1971,
+          "coverage_contribution": 192
+        },
+        "precise_timestamp": null,
+        "all_timestamps": null
+      },
+      "visual_evidence": {
+        "frame_info": "in-memory",
+        "num_frames": 1,
+        "similarity": 0.18042295075287834,
+        "raw_distance": 1.712451457977295,
+        "sampling_strategy": "adaptive",
+        "aggregation_method": "mean"
+      },
+      "text_score": 0.6901510369590591,
+      "visual_score": 0.18042295075287834,
+      "combined_score": 0.4862598024765868,
+      "has_both_modalities": true
+    },
+    {
+      "video_id": "0w1GlJTH2x4",
+      "segment_id": "0w1GlJTH2x4_seg_2",
+      "timestamp": [
+        128.42,
+        135.98
+      ],
+      "text_evidence": {
+        "text": "s a great stretch for the hip and low back, and you're going to see them back straight to the other leg. here we go. on the left leg, yeah, come back, there you go. every person has a different range of movements, just feel free to work on towards your range of movements. you hold it for 10 to 15 seconds, and if you feel comfortable, you can see more back on it. and then you change legs again, you keep it for 10 to 15 seconds and change leg and relax on food, yeah, and see back on it. then, breathing out while you're holding it and avoiding holding breath. you can try this exercise and let us know how you feel.",
+        "entities": [],
+        "similarity": 0.6886599815564559,
+        "raw_distance": 0.3730076253414154,
+        "window_info": {
+          "start_token": 384,
+          "end_token": 531,
+          "window_size": 147,
+          "total_tokens": 531,
+          "coverage_contribution": 83
+        },
+        "precise_timestamp": null,
+        "all_timestamps": null
+      },
+      "visual_evidence": {
+        "frame_info": "in-memory",
+        "num_frames": 2,
+        "similarity": 0.18151638840040282,
+        "raw_distance": 1.7064093351364136,
+        "sampling_strategy": "adaptive",
+        "aggregation_method": "mean"
+      },
+      "text_score": 0.6886599815564559,
+      "visual_score": 0.18151638840040282,
+      "combined_score": 0.4858025442940347,
+      "has_both_modalities": true
+    },
+    {
+      "video_id": "_bZHLRfVYtU",
+      "segment_id": "_bZHLRfVYtU_seg_3",
+      "timestamp": [
+        162.32,
+        164.0
+      ],
+      "text_evidence": {
+        "text": "pain, stop right over that spot. and then at this point what we're going to do is wing the elbows down like this. we're going to push down with the head to create that passive traction. hopefully this will get it to release. if it does it, you can put a little bit more passive stretch in there, but just quickly winging the elbows down just a little bit. and i don't know if you heard it over the microphone, but i got a very good release into my upper back right there. but this is a good way to really just pinpoint areas with the bed by sliding up and downwards like this and just focusing on the spots that need it the most. so here is a great upper back opener that you can do at the edge of a bed. you can also use the arm rest of a couch, a desk, or a chair. it just needs to be flat and elevated. we're also going to start off on our knees, so make sure to put a pillow or towel underneath them for extra comfort. let's go right up to that flat elevated surface. i'm going to bend the arm like this and place the back side of my arms flat on that elevated surface. let '",
+        "entities": [],
+        "similarity": 0.682934639550692,
+        "raw_distance": 0.3813561201095581,
+        "window_info": {
+          "start_token": 576,
+          "end_token": 832,
+          "window_size": 256,
+          "total_tokens": 3605,
+          "coverage_contribution": 192
+        },
+        "precise_timestamp": null,
+        "all_timestamps": null
+      },
+      "visual_evidence": {
+        "frame_info": "in-memory",
+        "num_frames": 1,
+        "similarity": 0.18914182109040678,
+        "raw_distance": 1.6652581691741943,
+        "sampling_strategy": "adaptive",
+        "aggregation_method": "mean"
+      },
+      "text_score": 0.682934639550692,
+      "visual_score": 0.18914182109040678,
+      "combined_score": 0.4854175121665779,
       "has_both_modalities": true
     }
   ]

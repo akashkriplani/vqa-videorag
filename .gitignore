@@ -214,6 +214,10 @@ videos_train/*
 videos_test/*
 videos_val/*
 
+videos_train_1/*
+videos_test_1/*
+videos_val_1/*
+
 EDA/*
 
 feature_extraction/*
