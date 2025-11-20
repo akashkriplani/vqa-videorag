@@ -43,6 +43,14 @@ except ImportError:
     print_segment_results = None
     format_timestamp = None
 
+# Import hybrid search functionality
+try:
+    from hybrid_search import HybridSearchEngine, load_segments_from_json_dir
+except ImportError:
+    print("Warning: Could not import hybrid_search. Hybrid search will not be available.")
+    HybridSearchEngine = None
+    load_segments_from_json_dir = None
+
 # Top-level function for multiprocessing
 
 # Parallel processing flag
@@ -747,12 +755,71 @@ def demo_pipeline(video_path, text_feat_dir, visual_feat_dir, faiss_text_path, f
 
     # Perform multimodal search
     print("\n[1] Searching textual index...")
-    text_search_results = text_db.search(query_emb_text, top_k=10)
+    text_search_results = text_db.search(query_emb_text, top_k=50)  # Get more for hybrid search
 
     print("[2] Searching visual index...")
     visual_search_results = visual_db.search(query_emb_visual, top_k=10)
 
     print(f"\nFound {len(text_search_results)} text results and {len(visual_search_results)} visual results")
+
+    # Apply hybrid search to text results if available
+    use_hybrid = True  # Set to False to disable hybrid search in demo
+    if use_hybrid and HybridSearchEngine is not None and load_segments_from_json_dir is not None:
+        print(f"\n{'='*80}")
+        print("APPLYING HYBRID SEARCH (BM25 + Dense Embeddings)")
+        print(f"{'='*80}")
+
+        try:
+            # Load segments from the text feature directory
+            segments_data = load_segments_from_json_dir(text_feat_dir)
+
+            # Initialize hybrid search engine
+            hybrid_engine = HybridSearchEngine(
+                segments_data=segments_data,
+                alpha=0.7  # 70% dense, 30% BM25
+            )
+
+            # Transform FAISS results to format expected by hybrid search
+            text_pool = []
+            for result in text_search_results:
+                text_pool.append({
+                    'raw_score': result.get('distance', float('inf')),
+                    'meta': result.get('metadata', {}),
+                    'source_index': faiss_text_path
+                })
+
+            # Perform hybrid search
+            hybrid_text_results = hybrid_engine.hybrid_search(
+                query=query,
+                dense_results=text_pool,
+                top_k=50,
+                fusion='linear',
+                expand_query=True
+            )
+
+            # Show fusion analysis
+            hybrid_engine.analyze_fusion_contribution(hybrid_text_results, top_k=10)
+
+            # Replace text results with hybrid results
+            text_search_results = []
+            for hybrid_result in hybrid_text_results:
+                meta = hybrid_result.get('metadata', {})
+                # Convert hybrid score back to distance format
+                combined_score = hybrid_result.get('combined_score', 0.0)
+                distance = -np.log(combined_score + 1e-10)
+
+                text_search_results.append({
+                    'metadata': meta,
+                    'distance': distance
+                })
+
+            print(f"✅ Hybrid search applied: Re-ranked {len(text_search_results)} text results")
+
+        except Exception as e:
+            print(f"⚠️  Hybrid search failed: {e}")
+            print("Falling back to dense-only search...")
+    elif use_hybrid:
+        print("\n⚠️  Hybrid search not available (module not imported)")
 
     # Transform results to match query_faiss format
     def transform_faiss_results(results, is_visual=False):
