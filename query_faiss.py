@@ -23,6 +23,7 @@ from transformers import AutoTokenizer, AutoModel
 import open_clip
 import faiss
 from hierarchical_search_utils import load_segments_from_json_files, refine_with_precise_timestamps
+from hybrid_search import HybridSearchEngine, load_segments_from_json_dir
 
 
 class FaissIndex:
@@ -644,7 +645,15 @@ def main():
     parser.add_argument("--filter_sampling", type=str, default=None, choices=["uniform", "adaptive", "quality_based"], help="Filter results by sampling strategy (optional)")
     parser.add_argument("--filter_aggregation", type=str, default=None, choices=["mean", "max"], help="Filter results by aggregation method (optional)")
     parser.add_argument("--hierarchical", default=True, action="store_true", help="Enable hierarchical search with fine-grained timestamp refinement")
-    parser.add_argument("--json_dir", type=str, default="feature_extraction/textual/demo", help="Directory containing JSON feature files for hierarchical search")
+    parser.add_argument("--json_dir", type=str, default="feature_extraction/", help="Directory containing JSON feature files (will search recursively through train/test/val)")
+
+    # Hybrid search arguments
+    parser.add_argument("--hybrid", action="store_true", help="Enable hybrid search (BM25 + dense embeddings)")
+    parser.add_argument("--alpha", type=float, default=0.7, help="Weight for dense retrieval in hybrid search (0-1, default: 0.7)")
+    parser.add_argument("--fusion", type=str, choices=["linear", "rrf"], default="linear", help="Fusion strategy for hybrid search: 'linear' or 'rrf' (Reciprocal Rank Fusion)")
+    parser.add_argument("--expand_query", action="store_true", default=True, help="Expand query with medical synonyms in BM25 search")
+    parser.add_argument("--analyze_fusion", action="store_true", help="Show detailed fusion analysis (BM25 vs dense contribution)")
+
     args = parser.parse_args()
 
     # If query not provided, prompt the user
@@ -708,6 +717,61 @@ def main():
 
     print(f"Retrieved {len(text_pool)} text results and {len(visual_pool)} visual results")
 
+    # Apply hybrid search if enabled
+    if args.hybrid and text_pool:
+        print(f"\n{'='*80}")
+        print("HYBRID SEARCH ENABLED (BM25 + Dense Embeddings)")
+        print(f"{'='*80}")
+
+        try:
+            # Load segments for BM25 index
+            segments_data = load_segments_from_json_dir(args.json_dir)
+
+            # Initialize hybrid search engine
+            hybrid_engine = HybridSearchEngine(
+                segments_data=segments_data,
+                alpha=args.alpha
+            )
+
+            # Perform hybrid search on text results
+            hybrid_text_results = hybrid_engine.hybrid_search(
+                query=args.query,
+                dense_results=text_pool,
+                top_k=args.local_k,
+                fusion=args.fusion,
+                expand_query=args.expand_query
+            )
+
+            # Show fusion analysis if requested
+            if args.analyze_fusion:
+                hybrid_engine.analyze_fusion_contribution(hybrid_text_results, top_k=args.final_k)
+
+            # Replace text_pool with hybrid results
+            text_pool = []
+            for hybrid_result in hybrid_text_results:
+                meta = hybrid_result.get('metadata', {})
+                # Convert hybrid score to raw_score format
+                combined_score = hybrid_result.get('combined_score', 0.0)
+                # Convert back to distance-like metric (lower is better)
+                raw_score = -np.log(combined_score + 1e-10)
+
+                text_pool.append({
+                    'raw_score': raw_score,
+                    'meta': meta,
+                    'source_index': 'hybrid',
+                    'hybrid_info': {
+                        'dense_score': hybrid_result.get('dense_score', 0.0),
+                        'bm25_score': hybrid_result.get('bm25_score', 0.0),
+                        'fusion_method': hybrid_result.get('fusion_method', 'unknown')
+                    }
+                })
+
+            print(f"✅ Hybrid search complete: {len(text_pool)} results")
+
+        except Exception as e:
+            print(f"⚠️  Hybrid search failed: {e}")
+            print("Falling back to dense-only search...")
+
     # Normalize raw distances to similarity in (0,1] using sim = 1/(1+dist)
     combined = []
     for item in text_pool:
@@ -718,7 +782,8 @@ def main():
             "meta": item.get("meta"),
             "source_index": item.get("source_index"),
             "modal": "text",
-            "raw_score": dist
+            "raw_score": dist,
+            "hybrid_info": item.get("hybrid_info")  # Preserve hybrid search info
         })
 
     for item in visual_pool:

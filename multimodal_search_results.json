@@ -1,218 +1,8 @@
 {
-  "query": "How to set the range of motion of the brace of T Scope post-op knee braces?",
+  "query": "How to do an upper back opener exercise to self-release your upper back for instant pain relief?",
   "total_segments": 10,
   "aggregation_mode": "segment",
   "results": [
-    {
-      "video_id": "_1NofulQlHs",
-      "segment_id": "_1NofulQlHs_seg_0",
-      "timestamp": [
-        22.4,
-        25.6
-      ],
-      "text_evidence": {
-        "text": "hi, i'm martha murray, and i'm one of the orthopedic surgeons here at children's hospital boston. this is elizabeth beck, one of our physicians assistants, and we're going to go through with you today how to adjust your post operative brace. the brace we're going to show you today is made by bragg, it's called the t - scope brace. it has two hinges, one on either side, and it's held together with four straps. we're going to show you a little bit about how to put it together. most of this work we will have done for you in the operating room, so you'll wake up with the brace adjusted, but sometimes when you get home, you'll need to do some of these adjustments as well, we'll show you those specific adjustments you'll likely need to do at home. but what we do in the operating room while you're still asleep is we're going to adjust first the hinges to the right length. for most people it means setting the bar at about the number one and then we can clip down these clips to make sure that it's secure in",
-        "entities": [],
-        "similarity": 0.6944987645952296,
-        "raw_distance": 0.3645648956298828,
-        "window_info": {
-          "start_token": 0,
-          "end_token": 256,
-          "window_size": 256,
-          "total_tokens": 1971,
-          "coverage_contribution": 256
-        },
-        "precise_timestamp": null,
-        "all_timestamps": null
-      },
-      "visual_evidence": {
-        "frame_info": "in-memory",
-        "num_frames": 1,
-        "similarity": 0.22221935282590488,
-        "raw_distance": 1.5040903091430664,
-        "sampling_strategy": "adaptive",
-        "aggregation_method": "mean"
-      },
-      "text_score": 0.6944987645952296,
-      "visual_score": 0.22221935282590488,
-      "combined_score": 0.5055869998874998,
-      "has_both_modalities": true
-    },
-    {
-      "video_id": "_6VFqX5i4M8",
-      "segment_id": "_6VFqX5i4M8_seg_6",
-      "timestamp": [
-        336.38,
-        338.1
-      ],
-      "text_evidence": {
-        "text": "to put pressure on the wound, which we've already done by tying the knot on top of the clotting sponge, and now we're elevating the wound with whatever we can find in the environment. and if you still see that there's a lot of blood coming out, you're going to do a pressure point. and there is a picture on my instruction sheet about the different pressure points. and here it's going to be right underneath the knee. and michael, while we're we're also doing this before we run out of time. if somebody has one of these, i know we have multiple different kits that we can purchase, but where's a good place to keep one once we have it at home? frankly, you can keep it anywhere. in your backpack, if you're a student at school, at work, in your desk, in the car, okay. so now, we're gonna simulate that the blood loss is not stopping, so we're gonna put this string the hole there. we're not going to really tie it as tight as we play tonight. that's what you're like here, but you're going to tie",
-        "entities": [],
-        "similarity": 0.6827590154158922,
-        "raw_distance": 0.3816133141517639,
-        "window_info": {
-          "start_token": 1152,
-          "end_token": 1408,
-          "window_size": 256,
-          "total_tokens": 1561,
-          "coverage_contribution": 192
-        },
-        "precise_timestamp": null,
-        "all_timestamps": null
-      },
-      "visual_evidence": {
-        "frame_info": "in-memory",
-        "num_frames": 1,
-        "similarity": 0.23287188939394807,
-        "raw_distance": 1.4572668075561523,
-        "sampling_strategy": "adaptive",
-        "aggregation_method": "mean"
-      },
-      "text_score": 0.6827590154158922,
-      "visual_score": 0.23287188939394807,
-      "combined_score": 0.5028041650071146,
-      "has_both_modalities": true
-    },
-    {
-      "video_id": "_9Vy1QsZ7k0",
-      "segment_id": "_9Vy1QsZ7k0_seg_1",
-      "timestamp": [
-        102.74,
-        109.94
-      ],
-      "text_evidence": {
-        "text": "be exerting a lot of pressure on some of the patients'teeth. so again, take your two thumbs and place them on the patient's inferior molars and you might have to exert significant pressure as you pull the jaw down and posterior until you feel pop. another technique you might want to drive is allowing the patient to bite down on a syringe between their mullers, then ask the patient to rock that syringe back and forth. this will allow them to use their own musculature to do the same downward and posterior force and relocate the jaw. some patients may find it difficult to hold the syringe on just one side, so an alternate and technique is to allow them to bite down on both sides and roll the syringe. and that's how you reduce a tmj dislocation.",
-        "entities": [],
-        "similarity": 0.7145264891534394,
-        "raw_distance": 0.33613520860671997,
-        "window_info": {
-          "start_token": 192,
-          "end_token": 367,
-          "window_size": 175,
-          "total_tokens": 367,
-          "coverage_contribution": 111
-        },
-        "precise_timestamp": null,
-        "all_timestamps": null
-      },
-      "visual_evidence": {
-        "frame_info": "in-memory",
-        "num_frames": 2,
-        "similarity": 0.17239443275298202,
-        "raw_distance": 1.7579702138900757,
-        "sampling_strategy": "adaptive",
-        "aggregation_method": "mean"
-      },
-      "text_score": 0.7145264891534394,
-      "visual_score": 0.17239443275298202,
-      "combined_score": 0.49767366659325646,
-      "has_both_modalities": true
-    },
-    {
-      "video_id": "_6VFqX5i4M8",
-      "segment_id": "_6VFqX5i4M8_seg_4",
-      "timestamp": [
-        226.3,
-        232.06
-      ],
-      "text_evidence": {
-        "text": "assist you by holding this, right? yes, yes. and i do notice michael that we have two clotting sponges and two dressings in the kit. why is that for multiple injuries? well, with bullet wounds, what some people don't think about is that there's going to be an entrance and an exit wound. oh, okay. so that's why we have two of each. each. yes. and so here i'm going to tie the knot on top of the wound to keep that pressure there. so now we're going to take out the second clotting sponge. and we're going to simulate that the azip wound was right there. if alex, if you can hold that in place, follow me if that's what happened. and now while we're doing both the entry and the exit wound, i know michael if the clotting and the dressing, we need something beyond that. still inside the kit, we have a turnicate correct? yes. now, i know you specifically chose a specific kind of turnicate for this. why was that? you'll see in just a little bit, it's",
-        "entities": [],
-        "similarity": 0.652654188290168,
-        "raw_distance": 0.4267078638076782,
-        "window_info": {
-          "start_token": 768,
-          "end_token": 1024,
-          "window_size": 256,
-          "total_tokens": 1561,
-          "coverage_contribution": 192
-        },
-        "precise_timestamp": null,
-        "all_timestamps": null
-      },
-      "visual_evidence": {
-        "frame_info": "in-memory",
-        "num_frames": 1,
-        "similarity": 0.2524242651362495,
-        "raw_distance": 1.3766440153121948,
-        "sampling_strategy": "adaptive",
-        "aggregation_method": "mean"
-      },
-      "text_score": 0.652654188290168,
-      "visual_score": 0.2524242651362495,
-      "combined_score": 0.49256221902860053,
-      "has_both_modalities": true
-    },
-    {
-      "video_id": "_9Vy1QsZ7k0",
-      "segment_id": "_9Vy1QsZ7k0_seg_0",
-      "timestamp": [
-        57.7,
-        58.9
-      ],
-      "text_evidence": {
-        "text": "oh, hi there. i'm alan guinea, and today i'm going to go over tmj dislocation and reduction. i'm working today with dr. sarah yee, who is behind the camera. in a temporal mandibular joint dislocation. so the head of the mandible is usually dislocated anteriorly from the mandibular fossa. and the standard reduction technique is to place your two thumbs on the patient's inferior mullers and exert downward and backward pressure to replace the joint. what you need to do is get the head of the mandible down and past the and tip anterior lip of the mandibular fossa. so you exert downward and backward pressure until you feel a pop. when you're doing this with a patient, i like to protect my thumbs with gauze, because you're gonna be exerting a lot of pressure on some of the patients'teeth. so again, take your two thumbs and place them on the patient's inferior molars and you might have to exert significant pressure as you pull the jaw down and posterior until you feel pop. another technique you might want to drive",
-        "entities": [],
-        "similarity": 0.7035156833226235,
-        "raw_distance": 0.35166510939598083,
-        "window_info": {
-          "start_token": 0,
-          "end_token": 256,
-          "window_size": 256,
-          "total_tokens": 367,
-          "coverage_contribution": 256
-        },
-        "precise_timestamp": null,
-        "all_timestamps": null
-      },
-      "visual_evidence": {
-        "frame_info": "in-memory",
-        "num_frames": 1,
-        "similarity": 0.175032072601409,
-        "raw_distance": 1.7427860498428345,
-        "sampling_strategy": "adaptive",
-        "aggregation_method": "mean"
-      },
-      "text_score": 0.7035156833226235,
-      "visual_score": 0.175032072601409,
-      "combined_score": 0.4921222390341377,
-      "has_both_modalities": true
-    },
-    {
-      "video_id": "-Zx3pWhMBjw",
-      "segment_id": "-Zx3pWhMBjw_seg_0",
-      "timestamp": [
-        23.32,
-        25.36
-      ],
-      "text_evidence": {
-        "text": "hi, i'm bob schrupp, physical therapist. we're at hayne, physical therapist. together we have the most famous physical therapist on the internet. and out of pain of course bob, this is napoleon, bonaparte, right? and today we're going to show you the single best treatment you could do for ac joint pain or a chromio - clovicular pain. so what are we talking about? that's a lot of service, isn't it, though? yeah. the clavicle is the collarbone, okay? so that's this right here. i'm actually leaning forward like that. yeah, that's right. yeah, how does that look? got the collar bone and it attaches to another bone right here, which is the acromion, and it forms a joint right there. the acromion is nothing more than part of the shoulder blade in the scapula. but this is the pain that we had on video, i'll probably put it up right here on how to test whether or not you are having acromion to ac joint pain. if it's positive, one of the",
-        "entities": [],
-        "similarity": 0.6862669845971698,
-        "raw_distance": 0.3764885365962982,
-        "window_info": {
-          "start_token": 0,
-          "end_token": 256,
-          "window_size": 256,
-          "total_tokens": 1099,
-          "coverage_contribution": 256
-        },
-        "precise_timestamp": null,
-        "all_timestamps": null
-      },
-      "visual_evidence": {
-        "frame_info": "in-memory",
-        "num_frames": 1,
-        "similarity": 0.19018185331616944,
-        "raw_distance": 1.6597745418548584,
-        "sampling_strategy": "adaptive",
-        "aggregation_method": "mean"
-      },
-      "text_score": 0.6862669845971698,
-      "visual_score": 0.19018185331616944,
-      "combined_score": 0.4878329320847697,
-      "has_both_modalities": true
-    },
     {
       "video_id": "_bZHLRfVYtU",
       "segment_id": "_bZHLRfVYtU_seg_0",
@@ -223,8 +13,8 @@
       "text_evidence": {
         "text": "in this video, i'm going to show you how to self - release your upper back for instant pain relief stay tuned. hey everyone, dr. rowe coming to you from spinecare in st. joseph, michigan. if you're dealing with a tight, locked up, painful spot in the upper or middle back and need a self - release or mobilization, this is a video that you're not going to want to miss. i'm going to go over different exercises that are really going to help open up the upper back and give quick relief even in as little as 30 seconds. as a side note, these are not chiropractic adjustments. they don't serve to replace chiropractic adjustments. they're simply stretching exercises that may end in a satisfying self - pop crack or release. so let's get started and get the upper back feeling better right now. so here is an upper back opener that you can do in bed first thing in the morning or before you go to bed at night. i'm going to lay flat on my back just like this. let's take our hands, place them behind or head little bit of support. what i'm going to do",
         "entities": [],
-        "similarity": 0.7042794213490573,
-        "raw_distance": 0.350580096244812,
+        "similarity": 0.8080977440998055,
+        "raw_distance": 0.2130722573568216,
         "window_info": {
           "start_token": 0,
           "end_token": 256,
@@ -238,33 +28,33 @@
       "visual_evidence": {
         "frame_info": "in-memory",
         "num_frames": 1,
-        "similarity": 0.16290004807009165,
-        "raw_distance": 1.814618468284607,
+        "similarity": 0.15894505826553018,
+        "raw_distance": 1.8391966819763184,
         "sampling_strategy": "adaptive",
         "aggregation_method": "mean"
       },
-      "text_score": 0.7042794213490573,
-      "visual_score": 0.16290004807009165,
-      "combined_score": 0.487727672037471,
+      "text_score": 0.8080977440998055,
+      "visual_score": 0.15894505826553018,
+      "combined_score": 0.5484366697660954,
       "has_both_modalities": true
     },
     {
-      "video_id": "_1NofulQlHs",
-      "segment_id": "_1NofulQlHs_seg_1",
+      "video_id": "_bZHLRfVYtU",
+      "segment_id": "_bZHLRfVYtU_seg_1",
       "timestamp": [
-        63.76,
-        66.08
+        76.76,
+        81.64
       ],
       "text_evidence": {
-        "text": "do at home. but what we do in the operating room while you're still asleep is we're going to adjust first the hinges to the right length. for most people it means setting the bar at about the number one and then we can clip down these clips to make sure that it's secure in place. if you find that your brace is sliding like this, up and down, check to see if the clip has come unhooked. so you can just click it down like that and secure it again in place. and again, we are going to do all four of these at the number one position. so let's do the other side too. this makes sure that the two hinges are the same length and the length that you need for your surgery protection. the next thing we're going to do is we're going to set the range of motion of the brace. so the brace as it comes can have a very wide range of motion. for most of our patients, initially we're going to limit your motion to about 90 degrees of bending or flexion. so in order to do that, we're going to take these little triangular tabs and pull it out to release it. and then we can slide",
+        "text": "here is an upper back opener that you can do in bed first thing in the morning or before you go to bed at night. i'm going to lay flat on my back just like this. let's take our hands, place them behind or head little bit of support. what i'm going to do is start off by just putting my shoulders and head right off the edge of the bed. we want to focus on just letting gravity take our body weight. so it's just taking my head and shoulders and arms downwards like this. the more that you go down, the more that you're going to feel a stretch over the area where your upper back is placed over the bed. so you want to go down as far as you're able to go, just letting gravity take it. from there what i do is wing my elbows down just a little bit and then push down with my head. this will create a passive stretch into the upper back, and if it is locked up, you may feel it go pop, click, or crack. again, that is just gas is being released from the joints. you want to hold this for about five seconds, you're just going to relax, take a breather, and then you",
         "entities": [],
-        "similarity": 0.6901510369590591,
-        "raw_distance": 0.3708448112010956,
+        "similarity": 0.6472837395908644,
+        "raw_distance": 0.43497053410636033,
         "window_info": {
           "start_token": 192,
           "end_token": 448,
           "window_size": 256,
-          "total_tokens": 1971,
+          "total_tokens": 3605,
           "coverage_contribution": 192
         },
         "precise_timestamp": null,
@@ -273,49 +63,119 @@
       "visual_evidence": {
         "frame_info": "in-memory",
         "num_frames": 1,
-        "similarity": 0.18042295075287834,
-        "raw_distance": 1.712451457977295,
+        "similarity": 0.1840633880385685,
+        "raw_distance": 1.6924750804901123,
         "sampling_strategy": "adaptive",
         "aggregation_method": "mean"
       },
-      "text_score": 0.6901510369590591,
-      "visual_score": 0.18042295075287834,
-      "combined_score": 0.4862598024765868,
+      "text_score": 0.6472837395908644,
+      "visual_score": 0.1840633880385685,
+      "combined_score": 0.461995598969946,
       "has_both_modalities": true
     },
     {
-      "video_id": "0w1GlJTH2x4",
-      "segment_id": "0w1GlJTH2x4_seg_2",
+      "video_id": "_bZHLRfVYtU",
+      "segment_id": "_bZHLRfVYtU_seg_9",
       "timestamp": [
-        128.42,
-        135.98
+        402.38,
+        403.74
       ],
       "text_evidence": {
-        "text": "s a great stretch for the hip and low back, and you're going to see them back straight to the other leg. here we go. on the left leg, yeah, come back, there you go. every person has a different range of movements, just feel free to work on towards your range of movements. you hold it for 10 to 15 seconds, and if you feel comfortable, you can see more back on it. and then you change legs again, you keep it for 10 to 15 seconds and change leg and relax on food, yeah, and see back on it. then, breathing out while you're holding it and avoiding holding breath. you can try this exercise and let us know how you feel.",
+        "text": "to pinch and it really opens up the back. you may feel again a sudden pop or release. hold this for about 20 seconds, relax, and then try to repeat this three to five times. you can also try different variations. so instead of going towards the y, go towards what i like to call the feel goal. and then do the same thing. you'll notice that it just opens up the back just a little bit differently. from there, you can also go into a w. but go through all three motions. i don't know if you just heard it over the microphone, but it kind of pretty good release right there. and i just tried to do all three motions, three to five repetitions, each repetition stretch a little bit more into it, and hopefully that gets the upper back to self release. so here is what is known as an upper back corkscrew stretch, and it's a very good upper back opener because we can do a little bit of rotation in there to get those joints moving. this one is best done at the edge of a bed, but you can also do this one on the floor. what i'm going to do is start with one leg straight. usually the leg that's closest",
         "entities": [],
-        "similarity": 0.6886599815564559,
-        "raw_distance": 0.3730076253414154,
+        "similarity": 0.629050581278887,
+        "raw_distance": 0.46354361012710277,
         "window_info": {
-          "start_token": 384,
-          "end_token": 531,
-          "window_size": 147,
-          "total_tokens": 531,
-          "coverage_contribution": 83
+          "start_token": 1728,
+          "end_token": 1984,
+          "window_size": 256,
+          "total_tokens": 3605,
+          "coverage_contribution": 192
         },
         "precise_timestamp": null,
         "all_timestamps": null
       },
       "visual_evidence": {
         "frame_info": "in-memory",
-        "num_frames": 2,
-        "similarity": 0.18151638840040282,
-        "raw_distance": 1.7064093351364136,
+        "num_frames": 1,
+        "similarity": 0.20768490320688843,
+        "raw_distance": 1.5717332363128662,
         "sampling_strategy": "adaptive",
         "aggregation_method": "mean"
       },
-      "text_score": 0.6886599815564559,
-      "visual_score": 0.18151638840040282,
-      "combined_score": 0.4858025442940347,
+      "text_score": 0.629050581278887,
+      "visual_score": 0.20768490320688843,
+      "combined_score": 0.46050431005008763,
+      "has_both_modalities": true
+    },
+    {
+      "video_id": "_bZHLRfVYtU",
+      "segment_id": "_bZHLRfVYtU_seg_2",
+      "timestamp": [
+        114.68,
+        118.16
+      ],
+      "text_evidence": {
+        "text": "stretch into the upper back, and if it is locked up, you may feel it go pop, click, or crack. again, that is just gas is being released from the joints. you want to hold this for about five seconds, you're just going to relax, take a breather, and then you're going to repeat. so just press down a little bit more with this next repetition to open up the back just a little bit more. you can do this for about three to five repetitions. from there, i just slide down a little bit and then repeat. pretty much all the way from the upper back to the middle back. with this one too, the further that you go down the more that you're going to be able to go downwards like this, so only go to your comfort level. if you do find that one particular spot is the spot that you're having a lot of achiness or pain, stop right over that spot. and then at this point what we're going to do is wing the elbows down like this. we're going to push down with the head to create that passive traction. hopefully this will get it to release. if it does it, you can put a little bit more",
+        "entities": [],
+        "similarity": 0.6193929306612913,
+        "raw_distance": 0.47901542471240965,
+        "window_info": {
+          "start_token": 384,
+          "end_token": 640,
+          "window_size": 256,
+          "total_tokens": 3605,
+          "coverage_contribution": 192
+        },
+        "precise_timestamp": null,
+        "all_timestamps": null
+      },
+      "visual_evidence": {
+        "frame_info": "in-memory",
+        "num_frames": 1,
+        "similarity": 0.19822485771041098,
+        "raw_distance": 1.618353247642517,
+        "sampling_strategy": "adaptive",
+        "aggregation_method": "mean"
+      },
+      "text_score": 0.6193929306612913,
+      "visual_score": 0.19822485771041098,
+      "combined_score": 0.45092570148093913,
+      "has_both_modalities": true
+    },
+    {
+      "video_id": "_bZHLRfVYtU",
+      "segment_id": "_bZHLRfVYtU_seg_11",
+      "timestamp": [
+        483.98,
+        489.34
+      ],
+      "text_evidence": {
+        "text": "of my right knee. from there, i'm going to press into it. already, you should feel a very good amount of stretch into the upper back, a very good rotation because we're going towards the left. from here, what i'm going to do is press into my knee and then just turn my upper body to look away from me, so kind of like rotating a little bit towards my left. the more that you turn like this, the more it's going to open up the back and you might get a sudden pop crack or self - release, don't try to force this one, just go towards a comfortable stretch if it is going to go, it will go. but you want to hold this stretch for about 20 seconds, and it really feels good. and then from there, i just relaxed, take a breather, and then i repeat this up to five times. with each repetition, you can stretch into it just a little bit more. again, don't try to force anything. and then when you're done on one side, always switch to the other to keep them both in balance. my personal favorite way to self - release the upper back with an extension exercise that you can do right on the",
+        "entities": [],
+        "similarity": 0.6401557627988959,
+        "raw_distance": 0.44604375286709985,
+        "window_info": {
+          "start_token": 2112,
+          "end_token": 2368,
+          "window_size": 256,
+          "total_tokens": 3605,
+          "coverage_contribution": 192
+        },
+        "precise_timestamp": null,
+        "all_timestamps": null
+      },
+      "visual_evidence": {
+        "frame_info": "in-memory",
+        "num_frames": 1,
+        "similarity": 0.16477525462311318,
+        "raw_distance": 1.8031728267669678,
+        "sampling_strategy": "adaptive",
+        "aggregation_method": "mean"
+      },
+      "text_score": 0.6401557627988959,
+      "visual_score": 0.16477525462311318,
+      "combined_score": 0.4500035595285828,
       "has_both_modalities": true
     },
     {
@@ -328,8 +188,8 @@
       "text_evidence": {
         "text": "pain, stop right over that spot. and then at this point what we're going to do is wing the elbows down like this. we're going to push down with the head to create that passive traction. hopefully this will get it to release. if it does it, you can put a little bit more passive stretch in there, but just quickly winging the elbows down just a little bit. and i don't know if you heard it over the microphone, but i got a very good release into my upper back right there. but this is a good way to really just pinpoint areas with the bed by sliding up and downwards like this and just focusing on the spots that need it the most. so here is a great upper back opener that you can do at the edge of a bed. you can also use the arm rest of a couch, a desk, or a chair. it just needs to be flat and elevated. we're also going to start off on our knees, so make sure to put a pillow or towel underneath them for extra comfort. let's go right up to that flat elevated surface. i'm going to bend the arm like this and place the back side of my arms flat on that elevated surface. let '",
         "entities": [],
-        "similarity": 0.682934639550692,
-        "raw_distance": 0.3813561201095581,
+        "similarity": 0.6316410397062768,
+        "raw_distance": 0.45943402134256184,
         "window_info": {
           "start_token": 576,
           "end_token": 832,
@@ -343,14 +203,154 @@
       "visual_evidence": {
         "frame_info": "in-memory",
         "num_frames": 1,
-        "similarity": 0.18914182109040678,
-        "raw_distance": 1.6652581691741943,
+        "similarity": 0.16170631764017987,
+        "raw_distance": 1.821973443031311,
         "sampling_strategy": "adaptive",
         "aggregation_method": "mean"
       },
-      "text_score": 0.682934639550692,
-      "visual_score": 0.18914182109040678,
-      "combined_score": 0.4854175121665779,
+      "text_score": 0.6316410397062768,
+      "visual_score": 0.16170631764017987,
+      "combined_score": 0.44366715087983805,
+      "has_both_modalities": true
+    },
+    {
+      "video_id": "6rK3QDN8MF8",
+      "segment_id": "6rK3QDN8MF8_seg_0",
+      "timestamp": [
+        22.0,
+        29.0
+      ],
+      "text_evidence": {
+        "text": "to get a quick out of your neck, try slowly rocking your head from side to side and gently roll your head around in a circle to work out any knots. stop if you feel any pain. you can also alternate between a cold compress and a heating pad for 20 minutes each to reduce swelling and numb the pain. try taking a hot shower since the steam of water can help massage your neck and relax your muscles. if your pain persists, take an over - the - counter pain reliever, like ibuprofen, aspirin, or naproxin. see a doctor if the cricking your neck doesn't go away after two to three days.",
+        "entities": [],
+        "similarity": 0.6421116054705567,
+        "raw_distance": 0.44299315010383206,
+        "window_info": {
+          "start_token": 0,
+          "end_token": 140,
+          "window_size": 140,
+          "total_tokens": 140,
+          "coverage_contribution": 140
+        },
+        "precise_timestamp": null,
+        "all_timestamps": null
+      },
+      "visual_evidence": {
+        "frame_info": "in-memory",
+        "num_frames": 2,
+        "similarity": 0.1456988956746682,
+        "raw_distance": 1.9262131452560425,
+        "sampling_strategy": "adaptive",
+        "aggregation_method": "mean"
+      },
+      "text_score": 0.6421116054705567,
+      "visual_score": 0.1456988956746682,
+      "combined_score": 0.4435465215522013,
+      "has_both_modalities": true
+    },
+    {
+      "video_id": "_bZHLRfVYtU",
+      "segment_id": "_bZHLRfVYtU_seg_7",
+      "timestamp": [
+        320.9,
+        326.1
+      ],
+      "text_evidence": {
+        "text": "we're going to focus on a very pesky spot that a lot of people get paying, which is right here at the base of the neck into the upper back across the shoulders. this is known as an upper trapezius stretch. very easy to do. what i'm going to do is take one arm, bend it at 90 degrees and then slide it across my lower back as much as i can. you'll feel this muscle right up here start to relax. that's that trapezius muscle from there i'm going to take my hand place it on the side right here and then i'm just going to take my ear towards the shoulder the other side shoulder when you do this you'll really feel it open up into the neck right here and a lot of times you'll get a sudden pop crack or release into the neck or into the upper back it usually feels really good again with this one don't try to force it you want to hold this one for about 15 to 20 seconds you're just going to relax and then on the next repetition drive the arm over a little bit more and then take the ear down towards the shoulder even more get a better stretch each time and i would do this on both sides",
+        "entities": [],
+        "similarity": 0.6137946204425901,
+        "raw_distance": 0.48809490118389803,
+        "window_info": {
+          "start_token": 1344,
+          "end_token": 1600,
+          "window_size": 256,
+          "total_tokens": 3605,
+          "coverage_contribution": 192
+        },
+        "precise_timestamp": null,
+        "all_timestamps": null
+      },
+      "visual_evidence": {
+        "frame_info": "in-memory",
+        "num_frames": 1,
+        "similarity": 0.18754093279695308,
+        "raw_distance": 1.6737581491470337,
+        "sampling_strategy": "adaptive",
+        "aggregation_method": "mean"
+      },
+      "text_score": 0.6137946204425901,
+      "visual_score": 0.18754093279695308,
+      "combined_score": 0.4432931453843353,
+      "has_both_modalities": true
+    },
+    {
+      "video_id": "5GO18A5-ZtQ",
+      "segment_id": "5GO18A5-ZtQ_seg_5",
+      "timestamp": [
+        384.34,
+        390.54
+      ],
+      "text_evidence": {
+        "text": "new cotton swab for each nostril. do not insert too deeply. if you feel discomfort, remove the cotton swab. stratplication into nostrils press sides of nose together and gently massage to spread ointment throughout the insides of the nostrils for about one minute. do not apply concurrently with any other intranasal products. wash your hands after application. please do not skip a dose. if you forget a dose, apply as soon as you remember. your anesthesiologist will tailor a plan of care that best fits your medical needs. you will have an ornerce who will help take care of you during the surgery. that's if we're from a new surgery, the surgical team will continue to play an active role in your care and so you go home and beyond. everyone in the operating room will work together to provide you the highest quality of care. when your surgery is finished, you'll wake up in the icu and be managed by a specialized cardiac intensive care team ready to monitor you and your heart and ensure safe and expeditious recovery. hey, dr. vargis, you dedicated cardiac surgical icu nurse will keep a close eye on you and focused on your comfort and care.",
+        "entities": [],
+        "similarity": 0.5784649240446551,
+        "raw_distance": 0.5473773667801447,
+        "window_info": {
+          "start_token": 960,
+          "end_token": 1216,
+          "window_size": 256,
+          "total_tokens": 1572,
+          "coverage_contribution": 192
+        },
+        "precise_timestamp": null,
+        "all_timestamps": null
+      },
+      "visual_evidence": {
+        "frame_info": "in-memory",
+        "num_frames": 2,
+        "similarity": 0.24019527778068772,
+        "raw_distance": 1.4263030290603638,
+        "sampling_strategy": "adaptive",
+        "aggregation_method": "mean"
+      },
+      "text_score": 0.5784649240446551,
+      "visual_score": 0.24019527778068772,
+      "combined_score": 0.44315706553906814,
+      "has_both_modalities": true
+    },
+    {
+      "video_id": "0w1GlJTH2x4",
+      "segment_id": "0w1GlJTH2x4_seg_0",
+      "timestamp": [
+        37.8,
+        46.24
+      ],
+      "text_evidence": {
+        "text": "alright guys, i'm going to go for three exercises today, i'm going to show you for the back pain. we're going to start with the basically cat camel, and jamie's going to show us how to do it. you can try this exercise at home for a piece that's a 10 - 8 let's go. you want to impart it back all the way up the end. while you're doing that, you don't want to hold your back and then your legs. go for a few reps, semi, especially all the way up, all the way up, all the way up, yeah, and relax, relax, relax, that's all, that's all, that's perfect, you want to go for three sets of, you let's say eight to ten, you can try these every and hour or two hours once, yeah, the next move, you're going to go for a single - leg stretch, basically, and lean in the stretch. you can move it forward, you have perfect, and you're trying to maintain your back kind of straight, lean back to the beat, maybe that's cool. yeah, you don '",
+        "entities": [],
+        "similarity": 0.6272804558879719,
+        "raw_distance": 0.4663615402902348,
+        "window_info": {
+          "start_token": 0,
+          "end_token": 256,
+          "window_size": 256,
+          "total_tokens": 531,
+          "coverage_contribution": 256
+        },
+        "precise_timestamp": null,
+        "all_timestamps": null
+      },
+      "visual_evidence": {
+        "frame_info": "in-memory",
+        "num_frames": 2,
+        "similarity": 0.16695322996237422,
+        "raw_distance": 1.7900415658950806,
+        "sampling_strategy": "adaptive",
+        "aggregation_method": "mean"
+      },
+      "text_score": 0.6272804558879719,
+      "visual_score": 0.16695322996237422,
+      "combined_score": 0.4431495655177328,
       "has_both_modalities": true
     }
   ]
