@@ -841,6 +841,8 @@ def demo_pipeline(video_path, text_feat_dir, visual_feat_dir, faiss_text_path, f
     # Apply segment-level aggregation (matching query_faiss.py)
     if aggregate_results_by_segment is not None:
         print("\n[3] Aggregating multimodal results by segment...")
+        # Use feature_extraction/ directory for hierarchical search (contains overlapping_timestamps)
+        hierarchical_json_dir = "feature_extraction/"
         segment_contexts = aggregate_results_by_segment(
             text_results=text_results_formatted,
             visual_results=visual_results_formatted,
@@ -848,7 +850,7 @@ def demo_pipeline(video_path, text_feat_dir, visual_feat_dir, faiss_text_path, f
             text_weight=0.6,
             visual_weight=0.4,
             enable_hierarchical=True,
-            json_dir=text_feat_dir
+            json_dir=hierarchical_json_dir
         )
 
         # Print and save results in the same format as query_faiss.py

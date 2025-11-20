@@ -106,10 +106,11 @@ def refine_with_precise_timestamps(search_results, segments_data, result_format=
 def load_segments_from_json_files(video_ids, json_dir):
     """
     Load segment data from JSON files for multiple videos.
+    Recursively searches through subdirectories (train/test/val) if needed.
 
     Args:
         video_ids: List of video IDs or set of video IDs
-        json_dir: Directory containing JSON feature files
+        json_dir: Directory containing JSON feature files (will search recursively)
 
     Returns:
         Dict mapping video_id -> list of segments
@@ -117,16 +118,38 @@ def load_segments_from_json_files(video_ids, json_dir):
     segments_by_video = {}
 
     for video_id in video_ids:
+        # First try direct path
         json_path = os.path.join(json_dir, f"{video_id}.json")
-        if not os.path.exists(json_path):
-            continue
 
-        try:
-            with open(json_path, 'r') as f:
-                segments = json.load(f)
-                segments_by_video[video_id] = segments
-        except Exception as e:
-            print(f"Warning: Could not load segments for {video_id}: {e}")
+        if os.path.exists(json_path):
+            try:
+                with open(json_path, 'r') as f:
+                    segments = json.load(f)
+                    segments_by_video[video_id] = segments
+                continue
+            except Exception as e:
+                print(f"Warning: Could not load segments for {video_id}: {e}")
+                continue
+
+        # If not found, search recursively through subdirectories
+        # Common structure: feature_extraction/textual/{split}/{video_id}.json
+        found = False
+        for root, dirs, files in os.walk(json_dir):
+            filename = f"{video_id}.json"
+            if filename in files:
+                json_path = os.path.join(root, filename)
+                try:
+                    with open(json_path, 'r') as f:
+                        segments = json.load(f)
+                        segments_by_video[video_id] = segments
+                    found = True
+                    break
+                except Exception as e:
+                    print(f"Warning: Could not load segments for {video_id} from {json_path}: {e}")
+                    continue
+
+        if not found:
+            print(f"Warning: JSON file not found for video_id: {video_id} in {json_dir}")
 
     return segments_by_video
 
