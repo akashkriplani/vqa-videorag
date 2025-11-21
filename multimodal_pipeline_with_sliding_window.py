@@ -1109,35 +1109,37 @@ def main():
     # test_single_video("videos_train/_6csIJAWj_s.mp4", "feature_extraction/textual/test_single", "feature_extraction/visual/test_single")
 
     # Test demo pipeline
-    demo_pipeline(
-        video_path="videos_train/_6csIJAWj_s.mp4",
-        text_feat_dir="feature_extraction/textual/demo",
-        visual_feat_dir="feature_extraction/visual/demo",
-        faiss_text_path="faiss_db/textual_demo.index",
-        faiss_visual_path="faiss_db/visual_demo.index"
-    )
+    # demo_pipeline(
+    #     video_path="videos_train/_6csIJAWj_s.mp4",
+    #     text_feat_dir="feature_extraction/textual/demo",
+    #     visual_feat_dir="feature_extraction/visual/demo",
+    #     faiss_text_path="faiss_db/textual_demo.index",
+    #     faiss_visual_path="faiss_db/visual_demo.index"
+    # )
 
-    # # Uncomment above and set your video path to test single video or run a demo pipeline
-    # splits = [
-    #     ("train", "videos_train"),
-    #     ("val", "videos_val"),
-    #     ("test", "videos_test")
-    # ]
+    # Uncomment above and set your video path to test single video or run a demo pipeline
+    splits = [
+        ("train", "videos_train"),
+        ("val", "videos_val"),
+        ("test", "videos_test")
+    ]
 
-    # for split, video_dir in splits:
-    #     print(f"Processing split: {split}")
-    #     process_split(
-    #         split=split,
-    #         video_dir=video_dir,
-    #         text_feat_dir=f"feature_extraction/textual/{split}",
-    #         visual_feat_dir=f"feature_extraction/visual/{split}",
-    #         faiss_text_path=f"faiss_db/textual_{split}.index",
-    #         faiss_visual_path=f"faiss_db/visual_{split}.index"
-    #     )
+    for split, video_dir in splits:
+        print(f"Processing split: {split}")
+        process_split(
+            split=split,
+            video_dir=video_dir,
+            text_feat_dir=f"feature_extraction/textual/{split}",
+            visual_feat_dir=f"feature_extraction/visual/{split}",
+            faiss_text_path=f"faiss_db/textual_{split}.index",
+            faiss_visual_path=f"faiss_db/visual_{split}.index"
+        )
 
-    # # After all splits are processed, filter JSON files based on available embeddings
-    # print("\nFiltering JSON files to keep only entries with both textual and visual embeddings...")
-    # filter_json_by_embeddings(model_name="openai/whisper-tiny")
+    # After all splits are processed, filter JSON files based on successfully generated embeddings
+    print("\n" + "="*80)
+    print("Filtering JSON files to keep only entries with both textual AND visual embeddings...")
+    print("="*80)
+    filter_json_by_embeddings(model_name="openai/whisper-tiny")
 
 if __name__ == "__main__":
     main()

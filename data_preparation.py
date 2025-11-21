@@ -72,32 +72,11 @@ def clean_dataset(dataset, failed_ids):
 def filter_by_embeddings(dataset, split, model_name=None):
     """Keep only entries for which both textual and visual embeddings exist.
 
-    If `model_name` is provided, prefer directories named
-    `feature_extraction_{sanitized_model}` (for example
-    `feature_extraction_openai_whisper_small`). Falls back to
-    the default `feature_extraction` directory when the model-specific
-    directory does not exist.
+    Always checks the `feature_extraction` directory (not model-specific directories).
+    This ensures we filter based on the current pipeline run, not old cached embeddings.
     """
-    # sanitize model name to a filesystem-friendly suffix (replace
-    # non-alphanumeric characters with underscore)
-    model_suffix = None
-    if model_name:
-        model_suffix = re.sub(r"[^A-Za-z0-9]+", "_", model_name)
-
-    # prefer model-specific feature extraction dir when present
-    candidate_base_dirs = []
-    if model_suffix:
-        candidate_base_dirs.append(f"feature_extraction_{model_suffix}")
-    candidate_base_dirs.append("feature_extraction")
-
-    base_dir = None
-    for cand in candidate_base_dirs:
-        if os.path.exists(cand):
-            base_dir = cand
-            break
-    # if none exists, keep using the default name (will result in empty sets)
-    if base_dir is None:
-        base_dir = "feature_extraction"
+    # Always use the base feature_extraction directory
+    base_dir = "feature_extraction"
 
     textual_dir = os.path.join(base_dir, "textual", split)
     visual_dir = os.path.join(base_dir, "visual", split)
@@ -129,23 +108,41 @@ def _sanitize_for_filename(s: str) -> str:
 def filter_json_by_embeddings(model_name: str):
     """Filter dataset JSON files to keep only entries with both textual and visual embeddings.
 
+    This function reads the base {split}_cleaned.json files and filters them to keep
+    only entries for which BOTH textual AND visual embedding JSON files exist in the
+    feature_extraction directories. This ensures the filtered file contains only
+    successfully processed videos.
+
     Writes new cleaned files in `CLEANED_DIR` named like
     `{split}_{sanitized_model}_cleaned.json`.
+
+    Args:
+        model_name: Name of the ASR model used for embeddings (e.g., 'openai/whisper-tiny')
     """
     sanitized = _sanitize_for_filename(model_name)
     os.makedirs(CLEANED_DIR, exist_ok=True)
+
     for split in ['train', 'val', 'test']:
         cleaned_path = os.path.join(CLEANED_DIR, f"{split}_cleaned.json")
         if not os.path.exists(cleaned_path):
             print(f"Warning: base cleaned file not found: {cleaned_path}. Skipping {split}.")
             continue
+
+        # Load the base cleaned dataset
         with open(cleaned_path, "r") as f:
             data = json.load(f)
-        filtered = filter_by_embeddings(data, split, model_name=model_name)
+        print(f"\nProcessing {split}: {len(data)} entries in base cleaned file")
+
+        # Filter by embeddings - keeps only entries with both textual AND visual embeddings
+        # Note: model_name parameter is ignored - we always check 'feature_extraction' directory
+        filtered = filter_by_embeddings(data, split)
+        print(f"After filtering by embeddings: {len(filtered)} entries (successfully processed)")
+
+        # Write the filtered file
         out_path = os.path.join(CLEANED_DIR, f"{split}_{sanitized}_cleaned.json")
         with open(out_path, "w") as out_f:
             json.dump(filtered, out_f, indent=2)
-        print(f"Wrote filtered file: {out_path} ({len(filtered)} entries)")
+        print(f"✅ Wrote filtered file: {out_path}")
 
 def main():
     splits = ["train", "val", "test"]
