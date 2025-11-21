@@ -93,13 +93,13 @@ class FaissDB:
         with open(self.index_path + ".meta.json", "w") as f:
             json.dump(sanitized_metadata, f)
 
-    def search(self, query_vec, top_k=5, save_results=True, results_file="search_results.json"):
+    def search(self, query_vec, top_k=5, save_results=False, results_file="search_results.json"):
         """Search for top-k similar embeddings and return serializable results.
 
         Args:
             query_vec: 1D numpy array representing the query vector
             top_k: number of top results to return
-            save_results: whether to save results to a JSON file
+            save_results: whether to save results to a JSON file (default: False for clean index directories)
             results_file: name of the file to save results (default: "search_results.json")
 
         Returns:

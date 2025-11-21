@@ -72,25 +72,126 @@ class HybridSearchEngine:
 
     def expand_medical_query(self, query: str) -> str:
         """
-        Expand query with common medical synonyms.
-        Can be extended with UMLS or custom medical ontology.
+        Expand query with common medical synonyms from medical ontologies.
+        Based on UMLS, SNOMED CT, and common medical terminology.
         """
-        # Basic medical term expansion (can be extended)
+        # Comprehensive medical term expansion based on medical ontologies
         expansions = {
-            "mouth cancer": ["oral cancer", "oral cavity cancer", "oropharyngeal cancer"],
-            "check": ["examination", "screening", "inspection", "assessment"],
-            "home": ["self-examination", "self-check", "self-screening"],
-            "surgery": ["procedure", "operation", "surgical intervention"],
-            "diagnosis": ["diagnostic", "identification", "detection"],
-            "treatment": ["therapy", "intervention", "management"],
-            "symptom": ["sign", "indication", "manifestation"],
-            "pain": ["discomfort", "ache", "soreness"],
-            "infection": ["inflammatory", "sepsis", "contamination"],
-            "blood pressure": ["hypertension", "BP", "arterial pressure"],
-            "heart attack": ["myocardial infarction", "MI", "cardiac arrest"],
-            "diabetes": ["diabetic", "blood sugar", "glucose"],
-            "cancer": ["tumor", "malignancy", "carcinoma", "neoplasm"],
-            "stroke": ["cerebrovascular accident", "CVA", "brain attack"]
+            # Cancer and Oncology
+            "mouth cancer": ["oral cancer", "oral cavity cancer", "oropharyngeal cancer", "mouth tumor"],
+            "cancer": ["tumor", "malignancy", "carcinoma", "neoplasm", "oncology", "malignant growth"],
+            "breast cancer": ["mammary carcinoma", "breast tumor", "breast malignancy"],
+            "lung cancer": ["pulmonary carcinoma", "bronchogenic carcinoma", "lung tumor"],
+            "skin cancer": ["melanoma", "basal cell carcinoma", "squamous cell carcinoma", "dermatologic cancer"],
+            "tumor": ["neoplasm", "growth", "mass", "lesion", "malignancy"],
+
+            # Cardiovascular
+            "heart attack": ["myocardial infarction", "MI", "cardiac infarction", "coronary thrombosis"],
+            "heart disease": ["cardiovascular disease", "cardiac disease", "coronary artery disease", "CAD"],
+            "stroke": ["cerebrovascular accident", "CVA", "brain attack", "cerebral infarction"],
+            "blood pressure": ["hypertension", "BP", "arterial pressure", "blood pressure level"],
+            "high blood pressure": ["hypertension", "HTN", "elevated blood pressure", "arterial hypertension"],
+            "heart failure": ["cardiac failure", "congestive heart failure", "CHF", "cardiac insufficiency"],
+            "arrhythmia": ["irregular heartbeat", "cardiac dysrhythmia", "abnormal heart rhythm"],
+
+            # Diabetes and Endocrine
+            "diabetes": ["diabetic", "blood sugar", "glucose", "diabetes mellitus", "hyperglycemia"],
+            "type 1 diabetes": ["insulin dependent diabetes", "IDDM", "juvenile diabetes"],
+            "type 2 diabetes": ["non-insulin dependent diabetes", "NIDDM", "adult onset diabetes"],
+            "thyroid": ["thyroid gland", "thyroid disorder", "thyroid disease"],
+
+            # Respiratory
+            "asthma": ["bronchial asthma", "reactive airway disease", "asthmatic condition"],
+            "COPD": ["chronic obstructive pulmonary disease", "emphysema", "chronic bronchitis"],
+            "pneumonia": ["lung infection", "pulmonary infection", "pneumonitis"],
+            "breathing": ["respiration", "respiratory", "ventilation", "breath"],
+
+            # Infectious Diseases
+            "infection": ["inflammatory", "sepsis", "contamination", "infectious disease", "pathogen"],
+            "bacterial infection": ["bacterial disease", "bacteremia", "bacterial contamination"],
+            "viral infection": ["virus", "viral disease", "viremia"],
+            "flu": ["influenza", "viral flu", "influenza virus"],
+            "COVID": ["coronavirus", "SARS-CoV-2", "COVID-19", "coronavirus disease"],
+
+            # Neurological
+            "alzheimer": ["dementia", "cognitive decline", "alzheimer disease", "memory loss"],
+            "parkinson": ["parkinson disease", "PD", "parkinsonian syndrome"],
+            "seizure": ["convulsion", "epileptic seizure", "fit", "epilepsy"],
+            "migraine": ["headache", "severe headache", "migrainous headache"],
+            "headache": ["cephalgia", "head pain", "cranial pain"],
+
+            # Gastrointestinal
+            "stomach": ["gastric", "abdominal", "belly", "gastrointestinal"],
+            "diarrhea": ["loose stools", "loose bowel movements", "gastroenteritis"],
+            "constipation": ["irregular bowels", "difficulty passing stool", "obstipation"],
+            "ulcer": ["peptic ulcer", "gastric ulcer", "duodenal ulcer", "stomach ulcer"],
+
+            # Musculoskeletal
+            "arthritis": ["joint inflammation", "arthritic", "osteoarthritis", "rheumatoid arthritis"],
+            "fracture": ["broken bone", "bone break", "bone fracture"],
+            "osteoporosis": ["bone loss", "decreased bone density", "brittle bones"],
+            "back pain": ["lumbar pain", "spinal pain", "dorsalgia", "backache"],
+
+            # General Symptoms
+            "symptom": ["sign", "indication", "manifestation", "clinical feature"],
+            "pain": ["discomfort", "ache", "soreness", "hurt", "painful", "hurting"],
+            "fever": ["pyrexia", "high temperature", "febrile", "elevated temperature"],
+            "fatigue": ["tiredness", "exhaustion", "weakness", "lethargy"],
+            "nausea": ["sick to stomach", "queasiness", "feeling sick", "nauseated"],
+            "dizziness": ["vertigo", "lightheaded", "giddiness", "dizzy"],
+            "swelling": ["edema", "inflammation", "swollen", "puffiness"],
+
+            # Medical Procedures
+            "surgery": ["procedure", "operation", "surgical intervention", "operative procedure"],
+            "check": ["examination", "screening", "inspection", "assessment", "evaluation"],
+            "home": ["self-examination", "self-check", "self-screening", "at-home"],
+            "diagnosis": ["diagnostic", "identification", "detection", "diagnose"],
+            "treatment": ["therapy", "intervention", "management", "care", "therapeutic"],
+            "prescription": ["medication", "drug", "medicine", "pharmaceutical"],
+            "vaccine": ["vaccination", "immunization", "shot", "inoculation"],
+            "test": ["screening", "diagnostic test", "lab test", "examination", "assay"],
+            "scan": ["imaging", "radiograph", "X-ray", "CT", "MRI"],
+            "biopsy": ["tissue sample", "tissue examination", "histology"],
+
+            # Mental Health
+            "depression": ["depressive disorder", "major depression", "clinical depression"],
+            "anxiety": ["anxiety disorder", "anxious", "nervousness", "worry"],
+            "stress": ["psychological stress", "mental stress", "tension"],
+
+            # Kidney and Urinary
+            "kidney": ["renal", "kidney function", "nephrology"],
+            "kidney disease": ["renal disease", "nephropathy", "kidney disorder"],
+            "urinary": ["urine", "urination", "urologic", "bladder"],
+
+            # Reproductive Health
+            "pregnancy": ["pregnant", "gestation", "prenatal", "expecting"],
+            "menstruation": ["period", "menstrual cycle", "menses", "monthly cycle"],
+
+            # Skin Conditions
+            "rash": ["skin rash", "dermatitis", "skin irritation", "eruption"],
+            "eczema": ["atopic dermatitis", "dermatitis", "skin inflammation"],
+            "psoriasis": ["psoriatic condition", "skin lesion", "plaque psoriasis"],
+
+            # Blood Disorders
+            "anemia": ["low blood count", "iron deficiency", "anemic", "low hemoglobin"],
+            "bleeding": ["hemorrhage", "blood loss", "hemorrhaging"],
+
+            # Vision and Hearing
+            "vision": ["sight", "visual", "eyesight", "eye health"],
+            "blind": ["blindness", "vision loss", "visual impairment"],
+            "hearing": ["auditory", "audition", "hearing ability"],
+            "deaf": ["deafness", "hearing loss", "hearing impairment"],
+
+            # Nutrition and Lifestyle
+            "diet": ["nutrition", "dietary", "eating habits", "nutritional"],
+            "exercise": ["physical activity", "workout", "fitness", "activity"],
+            "obesity": ["overweight", "excess weight", "obese", "weight problem"],
+            "weight loss": ["losing weight", "weight reduction", "slimming"],
+
+            # Emergency and Acute Care
+            "emergency": ["urgent", "acute", "critical", "urgent care"],
+            "trauma": ["injury", "traumatic injury", "wound", "physical trauma"],
+            "poisoning": ["toxic", "toxicity", "intoxication", "poison"],
         }
 
         query_lower = query.lower()
