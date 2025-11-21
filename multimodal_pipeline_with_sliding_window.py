@@ -511,32 +511,29 @@ def process_video_batch(batch_fnames, video_dir, text_feat_dir, visual_feat_dir,
         video_path = os.path.join(video_dir, fname)
         text_json_path = os.path.join(text_feat_dir, f"{video_id}.json")
         visual_json_path = os.path.join(visual_feat_dir, f"{video_id}.json")
-        # If JSON feature files already exist, load embeddings + metadata and return them
-        try:
-            text_embs, text_meta = None, None
-            visual_embs, visual_meta = None, None
-            if os.path.exists(text_json_path):
+
+        # If BOTH JSON feature files already exist, load embeddings + metadata and skip processing
+        if os.path.exists(text_json_path) and os.path.exists(visual_json_path):
+            try:
+                print(f"[SKIP] {fname}: Both text and visual JSONs exist. Loading from files...")
                 with open(text_json_path, 'r') as f:
                     text_json = json.load(f)
+                with open(visual_json_path, 'r') as f:
+                    visual_json = json.load(f)
+
                 # Reconstruct embeddings and metadata
                 text_embs = [np.array(r['embedding']) if isinstance(r.get('embedding'), list) else np.array(r.get('embedding')) for r in text_json]
                 text_meta = [{"video_id": video_id, **{k: v for k, v in r.items() if k != 'embedding'}} for r in text_json]
-            if os.path.exists(visual_json_path):
-                with open(visual_json_path, 'r') as f:
-                    visual_json = json.load(f)
                 visual_embs = [np.array(r['embedding']) if isinstance(r.get('embedding'), list) else np.array(r.get('embedding')) for r in visual_json]
                 visual_meta = [{"video_id": video_id, **{k: v for k, v in r.items() if k != 'embedding'}} for r in visual_json]
 
-            if text_embs is not None or visual_embs is not None:
-                # Normalize output shape to match the usual (text, visual, error) tuple structure
-                text_tuple = (text_embs, text_meta) if text_embs is not None else (None, None)
-                visual_tuple = (visual_embs, visual_meta) if visual_embs is not None else (None, None)
-                batch_results[fname] = (text_tuple, visual_tuple, None)
-                continue
-        except Exception as e:
-            # If existing JSONs are corrupt/unreadable, return an error for this file and continue
-            batch_results[fname] = (None, None, f"Failed to load existing JSONs: {e}")
-            continue
+                print(f"Loaded {len(text_embs)} text and {len(visual_embs)} visual embeddings from existing files.")
+                batch_results[fname] = ((text_embs, text_meta), (visual_embs, visual_meta), None)
+                continue  # Skip ASR and frame extraction
+            except Exception as e:
+                # If existing JSONs are corrupt/unreadable, reprocess the video
+                print(f"Warning: Failed to load existing JSONs for {fname}: {e}. Reprocessing video...")
+                # Fall through to reprocess
         try:
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
@@ -924,9 +921,9 @@ def process_video(fname, video_dir, text_feat_dir, visual_feat_dir,
     video_path = os.path.join(video_dir, fname)
     text_json_path = os.path.join(text_feat_dir, f"{video_id}.json")
     visual_json_path = os.path.join(visual_feat_dir, f"{video_id}.json")
-    # If both JSON files exist, load embeddings from them and return
+    # If both JSON files exist, load embeddings from them and return (SKIP ASR + FRAME EXTRACTION)
     if os.path.exists(text_json_path) and os.path.exists(visual_json_path):
-        print(f"[SKIP] {fname}: Both text and visual JSONs exist. Loading from files...")
+        print(f"[SKIP] {fname}: Both text and visual JSONs exist. Loading from files (no ASR/frame extraction needed)...")
         try:
             with open(text_json_path, 'r') as f:
                 text_json = json.load(f)
@@ -940,10 +937,10 @@ def process_video(fname, video_dir, text_feat_dir, visual_feat_dir,
             visual_embs = [np.array(r['embedding']) for r in visual_json]
             visual_meta = [{"video_id": video_id, **{k: v for k, v in r.items() if k != 'embedding'}} for r in visual_json]
 
-            print(f"Loaded {len(text_embs)} text and {len(visual_embs)} visual embeddings from existing files.")
+            print(f"✅ Loaded {len(text_embs)} text and {len(visual_embs)} visual embeddings from existing files (ASR/frame extraction skipped).")
             return (text_embs, text_meta), (visual_embs, visual_meta)
         except Exception as e:
-            print(f"Warning: Failed to load existing JSONs: {e}. Reprocessing video...")
+            print(f"⚠️  Warning: Failed to load existing JSONs: {e}. Reprocessing video...")
             # Fall through to reprocess the video
 
     # Each thread loads its own models
