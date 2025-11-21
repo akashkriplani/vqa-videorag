@@ -632,7 +632,25 @@ def hierarchical_search_legacy(query_emb, text_db, json_data, top_k=5, enable_fi
         result_format='multimodal'
     )
 
-def demo_pipeline(video_path, text_feat_dir, visual_feat_dir, faiss_text_path, faiss_visual_path):
+def demo_pipeline(video_path, text_feat_dir, visual_feat_dir, faiss_text_path, faiss_visual_path,
+                 window_size=256, stride=192, min_coverage_contribution=0.15,
+                 deduplication_mode='coverage', frames_per_segment=2,
+                 sampling_strategy='adaptive', quality_filter=False, aggregation_method='mean'):
+    """
+    Demo pipeline with configurable hyperparameters.
+
+    Text embedding hyperparameters:
+        window_size: Token window size (default: 256)
+        stride: Stride between windows (default: 192)
+        min_coverage_contribution: Minimum new token coverage to keep window (default: 0.15)
+        deduplication_mode: 'coverage', 'similarity', 'aggressive', or 'none' (default: 'coverage')
+
+    Visual embedding hyperparameters:
+        frames_per_segment: Number of frames per segment (default: 2)
+        sampling_strategy: 'uniform', 'adaptive', or 'quality_based' (default: 'adaptive')
+        quality_filter: Enable frame quality filtering (default: False)
+        aggregation_method: 'mean' or 'max' (default: 'mean')
+    """
     os.makedirs(text_feat_dir, exist_ok=True)
     os.makedirs(visual_feat_dir, exist_ok=True)
 
@@ -654,14 +672,17 @@ def demo_pipeline(video_path, text_feat_dir, visual_feat_dir, faiss_text_path, f
 
     print(f"Transcription complete: {len(transcript_chunks)} chunks extracted.")
 
-    # NER + text embedding with coverage-based deduplication
+    # NER + text embedding with configurable parameters
     nlp, bert_tokenizer, bert_model = load_ner_and_embed_models()
-    print("\nGenerating text embeddings with coverage-based deduplication...")
+    print(f"\nGenerating text embeddings with hyperparameters:")
+    print(f"  window_size={window_size}, stride={stride}")
+    print(f"  min_coverage_contribution={min_coverage_contribution}, deduplication_mode={deduplication_mode}")
     text_results = extract_entities_and_embed(
         transcript_chunks, nlp, bert_tokenizer, bert_model, video_id=video_id,
-        window_size=256, stride=192,
-        deduplication_mode='coverage',  # Use recommended coverage-based approach
-        min_coverage_contribution=0.15
+        window_size=window_size,
+        stride=stride,
+        deduplication_mode=deduplication_mode,
+        min_coverage_contribution=min_coverage_contribution
     )
 
     print(f"\nText embeddings generated: {len(text_results)} segments")
@@ -677,8 +698,17 @@ def demo_pipeline(video_path, text_feat_dir, visual_feat_dir, faiss_text_path, f
     with open(text_json_path, 'w') as f:
         json.dump(text_results_serializable, f)
 
-    # Visual embedding
-    visual_results = extract_frames_and_embed(video_path, text_results, video_id=video_id)
+    # Visual embedding with configurable parameters
+    print(f"\nGenerating visual embeddings with hyperparameters:")
+    print(f"  frames_per_segment={frames_per_segment}, sampling_strategy={sampling_strategy}")
+    print(f"  quality_filter={quality_filter}, aggregation_method={aggregation_method}")
+    visual_results = extract_frames_and_embed(
+        video_path, text_results, video_id=video_id,
+        frames_per_segment=frames_per_segment,
+        sampling_strategy=sampling_strategy,
+        quality_filter=quality_filter,
+        aggregation_method=aggregation_method
+    )
 
     print(f"Generated visual embeddings: {len(visual_results)} items.")
 
@@ -876,7 +906,15 @@ def demo_pipeline(video_path, text_feat_dir, visual_feat_dir, faiss_text_path, f
             meta = result.get('metadata', {})
             print(f"  {i}. {meta.get('segment_id', 'N/A')} - Score: {result.get('distance', 'N/A'):.4f}")
 
-def process_video(fname, video_dir, text_feat_dir, visual_feat_dir):
+def process_video(fname, video_dir, text_feat_dir, visual_feat_dir,
+                 window_size=256, stride=192, min_coverage_contribution=0.15,
+                 deduplication_mode='coverage', frames_per_segment=2,
+                 sampling_strategy='adaptive', quality_filter=False, aggregation_method='mean'):
+    """
+    Process a single video with configurable hyperparameters.
+
+    See demo_pipeline docstring for parameter descriptions.
+    """
     if not fname.endswith('.mp4'):
         return None, None
     video_id = os.path.splitext(fname)[0]
@@ -899,13 +937,14 @@ def process_video(fname, video_dir, text_feat_dir, visual_feat_dir):
         print(f"ASR failed for {video_path}: {e}")
         return None, None
 
-    # Use enhanced extraction with coverage-based deduplication
-    print("Generating text embeddings with coverage-based deduplication...")
+    # Use enhanced extraction with configurable parameters
+    print(f"Generating text embeddings (ws={window_size}, stride={stride}, dedup={deduplication_mode})...")
     text_results = extract_entities_and_embed(
         transcript_chunks, nlp, bert_tokenizer, bert_model, video_id=video_id,
-        window_size=256, stride=192,
-        deduplication_mode='coverage',
-        min_coverage_contribution=0.15
+        window_size=window_size,
+        stride=stride,
+        deduplication_mode=deduplication_mode,
+        min_coverage_contribution=min_coverage_contribution
     )
     print(f"Text embeddings generated: {len(text_results)} segments")
 
@@ -921,7 +960,13 @@ def process_video(fname, video_dir, text_feat_dir, visual_feat_dir):
     text_embs = [r['embedding'] for r in text_results]
     text_meta = [{"video_id": video_id, **r} for r in text_results]
 
-    visual_results = extract_frames_and_embed(video_path, text_results, video_id=video_id)
+    visual_results = extract_frames_and_embed(
+        video_path, text_results, video_id=video_id,
+        frames_per_segment=frames_per_segment,
+        sampling_strategy=sampling_strategy,
+        quality_filter=quality_filter,
+        aggregation_method=aggregation_method
+    )
     print(f"Generated visual embeddings: {len(visual_results)} items.")
 
     # Apply similarity-based deduplication to visual embeddings
@@ -951,7 +996,19 @@ def process_video(fname, video_dir, text_feat_dir, visual_feat_dir):
     return (text_embs, text_meta), (visual_embs, visual_meta)
 
 
-def process_split(split, video_dir, text_feat_dir, visual_feat_dir, faiss_text_path, faiss_visual_path):
+def process_split(split, video_dir, text_feat_dir, visual_feat_dir, faiss_text_path, faiss_visual_path,
+                 window_size=256, stride=192, min_coverage_contribution=0.15,
+                 deduplication_mode='coverage', frames_per_segment=2,
+                 sampling_strategy='adaptive', quality_filter=False, aggregation_method='mean'):
+    """
+    Process a full split (train/val/test) with configurable hyperparameters.
+
+    See demo_pipeline docstring for parameter descriptions.
+    """
+    print(f"\nProcessing split '{split}' with hyperparameters:")
+    print(f"  Text: window_size={window_size}, stride={stride}, min_cov={min_coverage_contribution}, dedup={deduplication_mode}")
+    print(f"  Visual: frames={frames_per_segment}, strategy={sampling_strategy}, quality={quality_filter}, agg={aggregation_method}")
+
     os.makedirs(text_feat_dir, exist_ok=True)
     os.makedirs(visual_feat_dir, exist_ok=True)
     all_text_embs, all_text_meta = [], []
@@ -980,7 +1037,16 @@ def process_split(split, video_dir, text_feat_dir, visual_feat_dir, faiss_text_p
         total = len(fnames)
         done = 0
         for idx, fname in enumerate(fnames, 1):
-            text, visual = process_video(fname, video_dir, text_feat_dir, visual_feat_dir)
+            text, visual = process_video(
+                fname, video_dir, text_feat_dir, visual_feat_dir,
+                window_size=window_size, stride=stride,
+                min_coverage_contribution=min_coverage_contribution,
+                deduplication_mode=deduplication_mode,
+                frames_per_segment=frames_per_segment,
+                sampling_strategy=sampling_strategy,
+                quality_filter=quality_filter,
+                aggregation_method=aggregation_method
+            )
             if text:
                 all_text_embs.extend(text[0])
                 all_text_meta.extend(text[1])
@@ -1017,7 +1083,7 @@ def test_single_video(video_path, text_feat_dir, visual_feat_dir):
 
 def main():
     # Test mode for a single video
-    # test_single_video("videos_train/_6csIJAWj_s.mp4", "feature_extraction/textual/test_single", "feature_extraction/visual/test_single")
+    test_single_video("videos_train/_6csIJAWj_s.mp4", "feature_extraction/textual/test_single", "feature_extraction/visual/test_single")
 
     # # Test demo pipeline
     # demo_pipeline(
@@ -1025,29 +1091,30 @@ def main():
     #     text_feat_dir="feature_extraction/textual/demo",
     #     visual_feat_dir="feature_extraction/visual/demo",
     #     faiss_text_path="faiss_db/textual_demo.index",
-    #     faiss_visual_path="faiss_db/visual_demo.index")
+    #     faiss_visual_path="faiss_db/visual_demo.index"
+    # )
 
-  # Uncomment above and set your video path to test single video or run a demo pipeline
-  splits = [
-    ("train", "videos_train"),
-    ("val", "videos_val"),
-    ("test", "videos_test")
-  ]
+    # # Uncomment above and set your video path to test single video or run a demo pipeline
+    # splits = [
+    #     ("train", "videos_train"),
+    #     ("val", "videos_val"),
+    #     ("test", "videos_test")
+    # ]
 
-  for split, video_dir in splits:
-      print(f"Processing split: {split}")
-      process_split(
-          split=split,
-          video_dir=video_dir,
-          text_feat_dir=f"feature_extraction/textual/{split}",
-          visual_feat_dir=f"feature_extraction/visual/{split}",
-          faiss_text_path=f"faiss_db/textual_{split}.index",
-          faiss_visual_path=f"faiss_db/visual_{split}.index"
-      )
+    # for split, video_dir in splits:
+    #     print(f"Processing split: {split}")
+    #     process_split(
+    #         split=split,
+    #         video_dir=video_dir,
+    #         text_feat_dir=f"feature_extraction/textual/{split}",
+    #         visual_feat_dir=f"feature_extraction/visual/{split}",
+    #         faiss_text_path=f"faiss_db/textual_{split}.index",
+    #         faiss_visual_path=f"faiss_db/visual_{split}.index"
+    #     )
 
-  # After all splits are processed, filter JSON files based on available embeddings
-  print("\nFiltering JSON files to keep only entries with both textual and visual embeddings...")
-  filter_json_by_embeddings(model_name="openai/whisper-tiny")
+    # # After all splits are processed, filter JSON files based on available embeddings
+    # print("\nFiltering JSON files to keep only entries with both textual and visual embeddings...")
+    # filter_json_by_embeddings(model_name="openai/whisper-tiny")
 
 if __name__ == "__main__":
     main()
