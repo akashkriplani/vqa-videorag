@@ -5,97 +5,6 @@
   "results": [
     {
       "video_id": "_6csIJAWj_s",
-      "segment_id": "_6csIJAWj_s_seg_0",
-      "timestamp": [
-        29.52,
-        36.48
-      ],
-      "text_evidence": {
-        "text": "hello. in this video, we're going to show you how to do a mouth - cance check. this simple check only takes 45 seconds, however it could save your life. last year, 8, 722 adults in the uk were diagnosed with mouth cancer. that's an average of 1 every hour. the number of new cases is doubled in the last 20 years, or more people are losing their life to the disease and cervical cancer and to a particular cancer combined. the key to beating mouth cancer is spotting it quickly, so it's really important everybody knows what the early wanting signs are. without further ado, let's get into it. firstly, take a quick look at your face and have a feel for any unusual lump saw bumps around your head and neck. once that's clear, you can then start checking the inside of your mouth. check your tongue for any unusual red or white patch lump or an ulcer that has lasted for longer than three weeks. make sure to check both sides and underneath. next, run your finger along the inside of both your cheeks. are there any lumps or bumps? again, can you see any red or white patches? all clear? great. now you should check",
-        "entities": [],
-        "similarity": 0.7825432198869897,
-        "raw_distance": 0.24520612501070432,
-        "window_info": {
-          "start_token": 0,
-          "end_token": 256,
-          "window_size": 256,
-          "total_tokens": 449,
-          "coverage_contribution": 256
-        },
-        "precise_timestamp": [
-          29.52,
-          36.48
-        ],
-        "all_timestamps": [
-          [
-            0.0,
-            5.36
-          ],
-          [
-            5.36,
-            11.6
-          ],
-          [
-            11.6,
-            16.88
-          ],
-          [
-            16.88,
-            20.72
-          ],
-          [
-            20.72,
-            26.08
-          ],
-          [
-            26.08,
-            29.52
-          ],
-          [
-            29.52,
-            36.48
-          ],
-          [
-            36.48,
-            42.32
-          ],
-          [
-            42.32,
-            47.2
-          ],
-          [
-            47.2,
-            51.2
-          ],
-          [
-            51.92,
-            58.08
-          ],
-          [
-            58.08,
-            62.72
-          ],
-          [
-            63.92,
-            69.44
-          ]
-        ]
-      },
-      "visual_evidence": {
-        "frame_info": "in-memory",
-        "num_frames": 2,
-        "similarity": 0.17627510128584634,
-        "raw_distance": 1.7357094287872314,
-        "sampling_strategy": "adaptive",
-        "aggregation_method": "mean"
-      },
-      "text_score": 0.7825432198869897,
-      "visual_score": 0.17627510128584634,
-      "combined_score": 0.5400359724465323,
-      "has_both_modalities": true
-    },
-    {
-      "video_id": "_6csIJAWj_s",
       "segment_id": "_6csIJAWj_s_seg_1",
       "timestamp": [
         90.04,
@@ -104,8 +13,8 @@
       "text_evidence": {
         "text": "lump or an ulcer that has lasted for longer than three weeks. make sure to check both sides and underneath. next, run your finger along the inside of both your cheeks. are there any lumps or bumps? again, can you see any red or white patches? all clear? great. now you should check the roof of your mouth. it can be tricky to get the right angle and you will need to tilt your head back slightly. also run your finger along the roof of your mouth to check for any lumps or spine. finally you should then check your lips. simply use your thumb and index fingers to pull down your lip and check for any red or white patches or lumps. do this for both the top and bottom lip. that's our step - by - step guide to performing a simple math cancer check at home. most likely you won't find anything, but if you do spot something while you're doing your check that doesn't seem quite right, make sure to book an appointment with your dentist or doctor. be math where and if in doubt get checked out. for more information about mask cancer, or to find out more about our mask cancer action month campaign, head to www. mascancer. org",
         "entities": [],
-        "similarity": 0.506938698868417,
-        "raw_distance": 0.6793651922308498,
+        "similarity": 0.5069387139763678,
+        "raw_distance": 0.6793651624285274,
         "window_info": {
           "start_token": 192,
           "end_token": 448,
@@ -179,14 +88,105 @@
       "visual_evidence": {
         "frame_info": "in-memory",
         "num_frames": 1,
-        "similarity": 0.17658597755142294,
-        "raw_distance": 1.7339473962783813,
+        "similarity": 0.2533875461504772,
+        "raw_distance": 1.3728351593017578,
         "sampling_strategy": "adaptive",
         "aggregation_method": "mean"
       },
-      "text_score": 0.506938698868417,
-      "visual_score": 0.17658597755142294,
-      "combined_score": 0.3747976103416194,
+      "text_score": 0.5069387139763678,
+      "visual_score": 0.2533875461504772,
+      "combined_score": 0.40551824684601157,
+      "has_both_modalities": true
+    },
+    {
+      "video_id": "_6csIJAWj_s",
+      "segment_id": "_6csIJAWj_s_seg_0",
+      "timestamp": [
+        29.52,
+        36.48
+      ],
+      "text_evidence": {
+        "text": "hello. in this video, we're going to show you how to do a mouth - cance check. this simple check only takes 45 seconds, however it could save your life. last year, 8, 722 adults in the uk were diagnosed with mouth cancer. that's an average of 1 every hour. the number of new cases is doubled in the last 20 years, or more people are losing their life to the disease and cervical cancer and to a particular cancer combined. the key to beating mouth cancer is spotting it quickly, so it's really important everybody knows what the early wanting signs are. without further ado, let's get into it. firstly, take a quick look at your face and have a feel for any unusual lump saw bumps around your head and neck. once that's clear, you can then start checking the inside of your mouth. check your tongue for any unusual red or white patch lump or an ulcer that has lasted for longer than three weeks. make sure to check both sides and underneath. next, run your finger along the inside of both your cheeks. are there any lumps or bumps? again, can you see any red or white patches? all clear? great. now you should check",
+        "entities": [],
+        "similarity": 0.4825432342678985,
+        "raw_distance": 0.72868475751705,
+        "window_info": {
+          "start_token": 0,
+          "end_token": 256,
+          "window_size": 256,
+          "total_tokens": 449,
+          "coverage_contribution": 256
+        },
+        "precise_timestamp": [
+          29.52,
+          36.48
+        ],
+        "all_timestamps": [
+          [
+            0.0,
+            5.36
+          ],
+          [
+            5.36,
+            11.6
+          ],
+          [
+            11.6,
+            16.88
+          ],
+          [
+            16.88,
+            20.72
+          ],
+          [
+            20.72,
+            26.08
+          ],
+          [
+            26.08,
+            29.52
+          ],
+          [
+            29.52,
+            36.48
+          ],
+          [
+            36.48,
+            42.32
+          ],
+          [
+            42.32,
+            47.2
+          ],
+          [
+            47.2,
+            51.2
+          ],
+          [
+            51.92,
+            58.08
+          ],
+          [
+            58.08,
+            62.72
+          ],
+          [
+            63.92,
+            69.44
+          ]
+        ]
+      },
+      "visual_evidence": {
+        "frame_info": "in-memory",
+        "num_frames": 2,
+        "similarity": 0.2529197228209129,
+        "raw_distance": 1.374683141708374,
+        "sampling_strategy": "adaptive",
+        "aggregation_method": "mean"
+      },
+      "text_score": 0.4825432342678985,
+      "visual_score": 0.2529197228209129,
+      "combined_score": 0.39069382968910427,
       "has_both_modalities": true
     },
     {

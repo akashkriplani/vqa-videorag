@@ -884,8 +884,11 @@ def demo_pipeline(video_path, text_feat_dir, visual_feat_dir, faiss_text_path, f
         )
 
         # Print and save results in the same format as query_faiss.py
+        # Determine output filename based on hybrid search usage
+        output_file = "multimodal_search_results_hybrid.json" if use_hybrid else "multimodal_search_results_dense.json"
+
         if print_segment_results is not None:
-            print_segment_results(segment_contexts, query=query)
+            print_segment_results(segment_contexts, query=query, output_file=output_file)
         else:
             print(f"\nFound {len(segment_contexts)} multimodal segments")
             for i, ctx in enumerate(segment_contexts[:3], 1):
