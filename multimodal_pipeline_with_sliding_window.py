@@ -921,10 +921,27 @@ def process_video(fname, video_dir, text_feat_dir, visual_feat_dir,
     video_path = os.path.join(video_dir, fname)
     text_json_path = os.path.join(text_feat_dir, f"{video_id}.json")
     visual_json_path = os.path.join(visual_feat_dir, f"{video_id}.json")
-    # Skip if both text and visual json files exist
+    # If both JSON files exist, load embeddings from them and return
     if os.path.exists(text_json_path) and os.path.exists(visual_json_path):
-        print(f"[SKIP] {fname}: Both text and visual JSONs exist.")
-        return None, None
+        print(f"[SKIP] {fname}: Both text and visual JSONs exist. Loading from files...")
+        try:
+            with open(text_json_path, 'r') as f:
+                text_json = json.load(f)
+            with open(visual_json_path, 'r') as f:
+                visual_json = json.load(f)
+
+            # Reconstruct embeddings and metadata
+            text_embs = [np.array(r['embedding']) for r in text_json]
+            text_meta = [{"video_id": video_id, **{k: v for k, v in r.items() if k != 'embedding'}} for r in text_json]
+
+            visual_embs = [np.array(r['embedding']) for r in visual_json]
+            visual_meta = [{"video_id": video_id, **{k: v for k, v in r.items() if k != 'embedding'}} for r in visual_json]
+
+            print(f"Loaded {len(text_embs)} text and {len(visual_embs)} visual embeddings from existing files.")
+            return (text_embs, text_meta), (visual_embs, visual_meta)
+        except Exception as e:
+            print(f"Warning: Failed to load existing JSONs: {e}. Reprocessing video...")
+            # Fall through to reprocess the video
 
     # Each thread loads its own models
     nlp, bert_tokenizer, bert_model = load_ner_and_embed_models()
@@ -1080,19 +1097,22 @@ def test_single_video(video_path, text_feat_dir, visual_feat_dir):
     print(f"Text embeddings: {len(text_embs)}; Visual embeddings: {len(visual_embs)}")
     print(f"Sample text meta: {text_meta[0] if text_meta else None}")
     print(f"Sample visual meta: {visual_meta[0] if visual_meta else None}")
+    save_faiss_indices_from_lists(text_embs, text_meta, visual_embs, visual_meta,
+                                  faiss_text_path='faiss_db/textual_single.index',
+                                  faiss_visual_path='faiss_db/visual_single.index')
 
 def main():
     # Test mode for a single video
-    test_single_video("videos_train/_6csIJAWj_s.mp4", "feature_extraction/textual/test_single", "feature_extraction/visual/test_single")
+    # test_single_video("videos_train/_6csIJAWj_s.mp4", "feature_extraction/textual/test_single", "feature_extraction/visual/test_single")
 
-    # # Test demo pipeline
-    # demo_pipeline(
-    #     video_path="videos_train/_6csIJAWj_s.mp4",
-    #     text_feat_dir="feature_extraction/textual/demo",
-    #     visual_feat_dir="feature_extraction/visual/demo",
-    #     faiss_text_path="faiss_db/textual_demo.index",
-    #     faiss_visual_path="faiss_db/visual_demo.index"
-    # )
+    # Test demo pipeline
+    demo_pipeline(
+        video_path="videos_train/_6csIJAWj_s.mp4",
+        text_feat_dir="feature_extraction/textual/demo",
+        visual_feat_dir="feature_extraction/visual/demo",
+        faiss_text_path="faiss_db/textual_demo.index",
+        faiss_visual_path="faiss_db/visual_demo.index"
+    )
 
     # # Uncomment above and set your video path to test single video or run a demo pipeline
     # splits = [

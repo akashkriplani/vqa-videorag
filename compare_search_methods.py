@@ -11,9 +11,19 @@ import argparse
 import subprocess
 import json
 import os
+import glob
+
+def discover_index(base_dir, pattern):
+    """Recursively search for FAISS index files in base_dir matching pattern"""
+    search_pattern = os.path.join(base_dir, '**', pattern)
+    matches = glob.glob(search_pattern, recursive=True)
+    return matches[0] if matches else None
 
 def run_search(query, text_index, visual_index, json_dir, top_k, hybrid=False, alpha=0.7):
     """Run search and return results"""
+    # Use different output files for dense vs hybrid
+    output_file = f'multimodal_search_results_{"hybrid" if hybrid else "dense"}.json'
+
     cmd = [
         'python', 'query_faiss.py',
         '--query', query,
@@ -22,7 +32,8 @@ def run_search(query, text_index, visual_index, json_dir, top_k, hybrid=False, a
         '--json_dir', json_dir,
         '--final_k', str(top_k),
         '--mode', 'segment',
-        '--hierarchical'
+        '--hierarchical',
+        '--output', output_file
     ]
 
     if hybrid:
@@ -31,10 +42,21 @@ def run_search(query, text_index, visual_index, json_dir, top_k, hybrid=False, a
     # Run command
     result = subprocess.run(cmd, capture_output=True, text=True)
 
-    # Load results from JSON file
-    if os.path.exists('multimodal_search_results.json'):
-        with open('multimodal_search_results.json', 'r') as f:
+    # Print any errors
+    if result.returncode != 0:
+        print(f"❌ Error running search:")
+        print(result.stderr)
+        return None
+
+    # Load results from unique output file
+    if os.path.exists(output_file):
+        with open(output_file, 'r') as f:
             return json.load(f)
+    else:
+        print(f"⚠️  Output file not found: {output_file}")
+        print(f"Command: {' '.join(cmd)}")
+        if result.stdout:
+            print(f"stdout: {result.stdout[:500]}")
 
     return None
 
@@ -70,18 +92,36 @@ def main():
                        help="Test query")
     parser.add_argument("--expected_video", type=str, default="_6csIJAWj_s",
                        help="Expected video ID for this query")
-    parser.add_argument("--text_index", type=str, default="faiss_db/textual_train.index",
-                       help="Path to textual FAISS index")
-    parser.add_argument("--visual_index", type=str, default="faiss_db/visual_train.index",
-                       help="Path to visual FAISS index")
-    parser.add_argument("--json_dir", type=str, default="feature_extraction/textual",
-                       help="Directory with JSON feature files (searches recursively through train/test/val)")
+    parser.add_argument("--text_index", type=str, default=None,
+                       help="Path to textual FAISS index (auto-discovers in --faiss_base_dir if not provided)")
+    parser.add_argument("--visual_index", type=str, default=None,
+                       help="Path to visual FAISS index (auto-discovers in --faiss_base_dir if not provided)")
+    parser.add_argument("--json_dir", type=str, default="feature_extraction/",
+                       help="Directory with JSON feature files (searches recursively through subfolders)")
+    parser.add_argument("--faiss_base_dir", type=str, default="faiss_db",
+                       help="Base directory to search for FAISS indices recursively (default: faiss_db)")
     parser.add_argument("--top_k", type=int, default=10,
                        help="Number of results to analyze")
     parser.add_argument("--alpha", type=float, default=0.7,
                        help="Dense weight for hybrid search")
 
     args = parser.parse_args()
+
+    # Auto-discover indices if not explicitly provided
+    if not args.text_index:
+        args.text_index = discover_index(args.faiss_base_dir, 'textual_*.index')
+        if not args.text_index:
+            print(f"❌ Could not find textual_*.index in {args.faiss_base_dir}")
+            return
+        print(f"📁 Auto-discovered textual index: {args.text_index}")
+
+    if not args.visual_index:
+        args.visual_index = discover_index(args.faiss_base_dir, 'visual_*.index')
+        if not args.visual_index:
+            print(f"❌ Could not find visual_*.index in {args.faiss_base_dir}")
+            return
+        print(f"📁 Auto-discovered visual index: {args.visual_index}")
+
 
     print("="*100)
     print("SEARCH METHOD COMPARISON")

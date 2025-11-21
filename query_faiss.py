@@ -421,7 +421,7 @@ def aggregate_results_by_video(text_results, visual_results, top_k=5, text_weigh
     return sorted_videos[:top_k]
 
 
-def print_segment_results(segment_contexts, query=None):
+def print_segment_results(segment_contexts, query=None, output_file="multimodal_search_results.json"):
     """
     Pretty print segment-level multimodal search results.
     """
@@ -487,7 +487,6 @@ def print_segment_results(segment_contexts, query=None):
         print("-" * 100)
 
     # Save to JSON
-    output_file = "multimodal_search_results.json"
     with open(output_file, "w") as f:
         json.dump({
             "query": query,
@@ -499,7 +498,7 @@ def print_segment_results(segment_contexts, query=None):
     print(f"\n✅ Results saved to: {output_file}")
 
 
-def print_video_contexts(video_contexts, query=None):
+def print_video_contexts(video_contexts, query=None, output_file="multimodal_search_results.json"):
     """
     Pretty print video-aggregated search results showing all matching segments.
     """
@@ -544,7 +543,6 @@ def print_video_contexts(video_contexts, query=None):
         print("-" * 100)
 
     # Save to JSON
-    output_file = "multimodal_search_results.json"
     with open(output_file, "w") as f:
         json.dump({
             "query": query,
@@ -653,8 +651,16 @@ def main():
     parser.add_argument("--fusion", type=str, choices=["linear", "rrf"], default="linear", help="Fusion strategy for hybrid search: 'linear' or 'rrf' (Reciprocal Rank Fusion)")
     parser.add_argument("--expand_query", action="store_true", default=True, help="Expand query with medical synonyms in BM25 search")
     parser.add_argument("--analyze_fusion", action="store_true", help="Show detailed fusion analysis (BM25 vs dense contribution)")
+    parser.add_argument("--output", type=str, default=None, help="Output file path for search results (default: auto-generated based on search type)")
 
     args = parser.parse_args()
+
+    # Auto-generate output filename based on search type if not specified
+    if args.output is None:
+        if args.hybrid:
+            args.output = "multimodal_search_results_hybrid.json"
+        else:
+            args.output = "multimodal_search_results_dense.json"
 
     # If query not provided, prompt the user
     if not args.query:
@@ -819,7 +825,7 @@ def main():
             visual_weight=args.visual_weight
         )
 
-        print_video_contexts(video_contexts, query=args.query)
+        print_video_contexts(video_contexts, query=args.query, output_file=args.output)
 
     else:
         # Segment-level aggregation: precise multimodal linking via segment_id
@@ -836,7 +842,7 @@ def main():
             json_dir=args.json_dir if args.hierarchical else None
         )
 
-        print_segment_results(segment_contexts, query=args.query)
+        print_segment_results(segment_contexts, query=args.query, output_file=args.output)
 
 
 if __name__ == "__main__":
