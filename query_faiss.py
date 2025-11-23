@@ -653,6 +653,12 @@ def main():
     parser.add_argument("--analyze_fusion", action="store_true", help="Show detailed fusion analysis (BM25 vs dense contribution)")
     parser.add_argument("--output", type=str, default=None, help="Output file path for search results (default: auto-generated based on search type)")
 
+    # Answer generation arguments
+    parser.add_argument("--generate_answer", action="store_true", help="Generate answer using LLM (GPT-4o-mini)")
+    parser.add_argument("--answer_model", type=str, default="gpt-4o-mini", help="LLM model for answer generation (default: gpt-4o-mini)")
+    parser.add_argument("--answer_max_tokens", type=int, default=250, help="Maximum tokens for answer (default: 250)")
+    parser.add_argument("--answer_temperature", type=float, default=0.3, help="Temperature for answer generation (default: 0.3)")
+
     args = parser.parse_args()
 
     # Auto-generate output filename based on search type if not specified
@@ -843,6 +849,43 @@ def main():
         )
 
         print_segment_results(segment_contexts, query=args.query, output_file=args.output)
+
+        # Generate answer if requested
+        if args.generate_answer:
+            print(f"\n{'='*80}")
+            print("GENERATING ANSWER (GPT-4o-mini)")
+            print(f"{'='*80}")
+
+            try:
+                from answer_generation import AnswerGenerator, format_answer_output
+
+                generator = AnswerGenerator(model_name=args.answer_model)
+                answer_result = generator.generate_answer(
+                    query=args.query,
+                    segment_contexts=segment_contexts,
+                    max_tokens=args.answer_max_tokens,
+                    temperature=args.answer_temperature,
+                    top_k_evidence=3
+                )
+
+                # Display formatted answer
+                print("\n" + format_answer_output(answer_result))
+
+                # Save answer with search results
+                answer_output_file = args.output.replace('.json', '_with_answer.json')
+                import json
+                with open(answer_output_file, 'w') as f:
+                    json.dump({
+                        'query': args.query,
+                        'search_results': segment_contexts,
+                        'generated_answer': answer_result
+                    }, f, indent=2)
+
+                print(f"\n✅ Answer saved to: {answer_output_file}")
+
+            except Exception as e:
+                print(f"\n❌ Answer generation failed: {e}")
+                print("   Make sure OPENAI_API_KEY is set in environment or .env file")
 
 
 if __name__ == "__main__":
