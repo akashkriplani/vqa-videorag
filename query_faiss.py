@@ -659,6 +659,13 @@ def main():
     parser.add_argument("--answer_max_tokens", type=int, default=250, help="Maximum tokens for answer (default: 250)")
     parser.add_argument("--answer_temperature", type=float, default=0.3, help="Temperature for answer generation (default: 0.3)")
 
+    # Adaptive context selection arguments
+    parser.add_argument("--enable_curation", action="store_true", default=False, help="Enable adaptive context selection with factual grounding (default: False)")
+    parser.add_argument("--enable_attribution", action="store_true", default=False, help="Enable self-reflection attribution mapping (default: False)")
+    parser.add_argument("--quality_threshold", type=float, default=0.3, help="Minimum quality score for context filtering (default: 0.3)")
+    parser.add_argument("--nli_top_k", type=int, default=15, help="Number of top candidates for NLI factuality scoring (default: 15)")
+    parser.add_argument("--token_budget", type=int, default=600, help="Maximum tokens for curated context (default: 600)")
+
     args = parser.parse_args()
 
     # Auto-generate output filename based on search type if not specified
@@ -859,7 +866,33 @@ def main():
             try:
                 from answer_generation import AnswerGenerator, format_answer_output
 
-                generator = AnswerGenerator(model_name=args.answer_model)
+                # Configure curation settings if enabled
+                curation_config = None
+                if args.enable_curation:
+                    curation_config = {
+                        'quality_threshold': args.quality_threshold,
+                        'nli_top_k': args.nli_top_k,
+                        'token_budget': args.token_budget
+                    }
+                    print(f"\n🔧 Adaptive Context Selection: ENABLED")
+                    print(f"   - Quality threshold: {args.quality_threshold}")
+                    print(f"   - NLI top-k: {args.nli_top_k}")
+                    print(f"   - Token budget: {args.token_budget}")
+                else:
+                    print(f"\n🔧 Adaptive Context Selection: DISABLED (use --enable_curation to enable)")
+
+                if args.enable_attribution:
+                    print(f"🔧 Self-Reflection Attribution: ENABLED")
+                else:
+                    print(f"🔧 Self-Reflection Attribution: DISABLED (use --enable_attribution to enable)")
+
+                generator = AnswerGenerator(
+                    model_name=args.answer_model,
+                    enable_curation=args.enable_curation,
+                    enable_attribution=args.enable_attribution,
+                    curation_config=curation_config
+                )
+
                 answer_result = generator.generate_answer(
                     query=args.query,
                     segment_contexts=segment_contexts,

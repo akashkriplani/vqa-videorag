@@ -7,6 +7,8 @@ Features:
 - Timestamp-aware medical responses
 - Evidence-based answer generation
 - Confidence scoring
+- Adaptive context selection with factual grounding (NEW)
+- Self-reflection attribution (NEW)
 """
 
 import os
@@ -17,6 +19,27 @@ from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
+
+# Import new modules (optional dependencies)
+try:
+    from context_selector import ContextSelector
+    CONTEXT_SELECTION_AVAILABLE = True
+except ImportError:
+    CONTEXT_SELECTION_AVAILABLE = False
+    print("⚠️  context_selector not available. Install dependencies to enable adaptive context selection.")
+
+try:
+    from attribution import SelfReflectionAttribution
+    ATTRIBUTION_AVAILABLE = True
+except ImportError:
+    ATTRIBUTION_AVAILABLE = False
+    print("⚠️  attribution not available. Install dependencies to enable self-reflection attribution.")
+
+try:
+    from prompts import PromptManager
+    PROMPT_MANAGER_AVAILABLE = True
+except ImportError:
+    PROMPT_MANAGER_AVAILABLE = False
 
 
 class AnswerGenerator:
@@ -29,21 +52,64 @@ class AnswerGenerator:
     - Average cost per query: ~$0.0003 (with retrieval context)
     """
 
-    def __init__(self, model_name="gpt-4o-mini", api_key=None):
+    def __init__(
+        self,
+        model_name="gpt-4o-mini",
+        api_key=None,
+        enable_curation=True,
+        enable_attribution=True,
+        curation_config=None
+    ):
         """
         Initialize answer generator.
 
         Args:
             model_name: OpenAI model name (default: gpt-4o-mini)
             api_key: OpenAI API key (or set OPENAI_API_KEY env var)
+            enable_curation: Enable adaptive context selection (default: True)
+            enable_attribution: Enable self-reflection attribution (default: True)
+            curation_config: Optional config dict for ContextSelector
         """
         self.model_name = model_name
         self.client = OpenAI(api_key=api_key or os.getenv("OPENAI_API_KEY"))
+        self.enable_curation = enable_curation and CONTEXT_SELECTION_AVAILABLE
+        self.enable_attribution = enable_attribution and ATTRIBUTION_AVAILABLE
 
         if not self.client.api_key:
             raise ValueError(
                 "OpenAI API key required. Set OPENAI_API_KEY environment variable or pass api_key parameter."
             )
+
+        # Initialize context selector
+        self.context_selector = None
+        if self.enable_curation:
+            try:
+                config = curation_config or {}
+                self.context_selector = ContextSelector(
+                    quality_threshold=config.get('quality_threshold', 0.3),
+                    token_budget=config.get('token_budget', 600),
+                    use_nli=config.get('use_nli', True),
+                    device=config.get('device', None)
+                )
+                print("✅ Adaptive context selection enabled")
+            except Exception as e:
+                print(f"⚠️  Failed to initialize context selector: {e}")
+                self.enable_curation = False
+
+        # Initialize attribution system
+        self.attributor = None
+        if self.enable_attribution:
+            try:
+                self.attributor = SelfReflectionAttribution()
+                print("✅ Self-reflection attribution enabled")
+            except Exception as e:
+                print(f"⚠️  Failed to initialize attributor: {e}")
+                self.enable_attribution = False
+
+        # Initialize prompt manager
+        self.prompt_manager = None
+        if PROMPT_MANAGER_AVAILABLE:
+            self.prompt_manager = PromptManager()
 
     def generate_answer(
         self,
@@ -51,7 +117,8 @@ class AnswerGenerator:
         segment_contexts: List[Dict],
         max_tokens: int = 250,
         temperature: float = 0.3,
-        top_k_evidence: int = 3
+        top_k_evidence: int = 3,
+        query_type: Optional[str] = None
     ) -> Dict:
         """
         Generate answer from retrieved multimodal segments.
@@ -62,6 +129,7 @@ class AnswerGenerator:
             max_tokens: Maximum answer length (default: 250 for ~200 words)
             temperature: Sampling temperature (0.3 for medical accuracy)
             top_k_evidence: Number of segments to include in context (default: 3)
+            query_type: Optional query type override ('procedural', 'diagnostic', 'factoid', 'general')
 
         Returns:
             {
@@ -71,18 +139,58 @@ class AnswerGenerator:
                 'model_used': str,
                 'generation_time': float,
                 'cost_estimate': float,           # Estimated API cost in USD
-                'token_usage': Dict               # Input/output token counts
+                'token_usage': Dict,              # Input/output token counts
+                'attribution_map': Optional[Dict], # Self-reflection attribution (if enabled)
+                'curation_stats': Optional[Dict],  # Context curation statistics (if enabled)
+                'conflicts_detected': Optional[List[Dict]]  # Conflicts in evidence (if enabled)
             }
         """
         start_time = time.time()
 
-        # Limit evidence to top-k for cost optimization
-        top_segments = segment_contexts[:top_k_evidence]
+        # Step 1: Classify query type (if not provided)
+        if query_type is None and self.prompt_manager:
+            query_type = self.prompt_manager.classify_question(query)
+        elif query_type is None:
+            query_type = 'general'
+
+        print(f"\n{'='*80}")
+        print(f"ANSWER GENERATION PIPELINE")
+        print(f"{'='*80}")
+        print(f"Query: {query}")
+        print(f"Query type: {query_type}")
+        print(f"Input segments: {len(segment_contexts)}")
+
+        # Step 2: Adaptive context selection (if enabled)
+        curated_segments = segment_contexts
+        curation_stats = None
+        conflicts_detected = None
+
+        if self.enable_curation and self.context_selector:
+            print(f"\n🔍 Applying adaptive context selection...")
+            curation_result = self.context_selector.curate_context(
+                query=query,
+                segments=segment_contexts,
+                query_type=query_type
+            )
+
+            curated_segments = curation_result['selected_segments']
+            curation_stats = curation_result['stats']
+            conflicts_detected = curation_result['conflicts_detected']
+
+            print(f"✅ Context curated: {len(curated_segments)} segments selected")
+
+            if conflicts_detected:
+                print(f"⚠️  {len(conflicts_detected)} conflicts detected and resolved")
+        else:
+            # Fallback: simple top-k truncation
+            curated_segments = segment_contexts[:top_k_evidence]
+            print(f"Using top-{top_k_evidence} segments (curation disabled)")
 
         # Format prompt with evidence
-        prompt = self._format_medical_prompt(query, top_segments)
+        prompt = self._format_medical_prompt(query, curated_segments)
 
-        # Generate answer
+        # Step 3: Generate answer
+        print(f"\n💬 Generating answer with {self.model_name}...")
         try:
             response = self.client.chat.completions.create(
                 model=self.model_name,
@@ -113,7 +221,10 @@ class AnswerGenerator:
                 token_usage['output_tokens'] * 0.600 / 1_000_000
             )
 
+            print(f"✅ Answer generated ({token_usage['output_tokens']} tokens, ${cost_estimate:.6f})")
+
         except Exception as e:
+            print(f"❌ Answer generation failed: {e}")
             return {
                 'answer': f"Error generating answer: {str(e)}",
                 'confidence': 0.0,
@@ -121,23 +232,52 @@ class AnswerGenerator:
                 'model_used': self.model_name,
                 'generation_time': time.time() - start_time,
                 'cost_estimate': 0.0,
-                'token_usage': {'error': str(e)}
+                'token_usage': {'error': str(e)},
+                'attribution_map': None,
+                'curation_stats': curation_stats,
+                'conflicts_detected': conflicts_detected
             }
 
-        # Extract evidence segments with timestamps
-        evidence_segments = self._extract_evidence(top_segments)
+        # Step 4: Self-reflection attribution (if enabled)
+        attribution_result = None
+        if self.enable_attribution and self.attributor:
+            print(f"\n🔍 Generating attribution map...")
+            attribution_result = self.attributor.generate_attribution(
+                answer=answer_text,
+                evidence_segments=curated_segments,
+                conflicts=conflicts_detected
+            )
+            print(f"✅ Attribution complete: {attribution_result['overall_confidence']:.2%} confidence")
 
-        # Estimate confidence based on segment scores
-        confidence = self._estimate_confidence(top_segments)
+        # Extract evidence segments with timestamps
+        evidence_segments = self._extract_evidence(curated_segments)
+
+        # Estimate confidence based on segment scores (or use attribution confidence)
+        if attribution_result:
+            confidence = attribution_result['overall_confidence']
+        else:
+            confidence = self._estimate_confidence(curated_segments)
+
+        generation_time = time.time() - start_time
+        print(f"\n{'='*80}")
+        print(f"PIPELINE COMPLETE")
+        print(f"{'='*80}")
+        print(f"Total time: {generation_time:.2f}s")
+        print(f"Final confidence: {confidence:.2%}")
+        print(f"{'='*80}\n")
 
         return {
             'answer': answer_text,
             'confidence': confidence,
             'evidence_segments': evidence_segments,
             'model_used': self.model_name,
-            'generation_time': time.time() - start_time,
+            'generation_time': generation_time,
             'cost_estimate': cost_estimate,
-            'token_usage': token_usage
+            'token_usage': token_usage,
+            'attribution_map': attribution_result,
+            'curation_stats': curation_stats,
+            'conflicts_detected': conflicts_detected,
+            'query_type': query_type
         }
 
     def _format_medical_prompt(self, query: str, segments: List[Dict]) -> str:
@@ -307,12 +447,14 @@ Answer:"""
         return results
 
 
-def format_answer_output(result: Dict) -> str:
+def format_answer_output(result: Dict, show_attribution: bool = True, show_curation: bool = True) -> str:
     """
     Format answer result for display.
 
     Args:
         result: Output from generate_answer()
+        show_attribution: Whether to show attribution map (default: True)
+        show_curation: Whether to show curation statistics (default: True)
 
     Returns:
         Formatted string for console/UI display
@@ -324,6 +466,7 @@ def format_answer_output(result: Dict) -> str:
     output.append(result['answer'])
     output.append("\n" + "-" * 80)
     output.append(f"Confidence: {result['confidence']:.2%}")
+    output.append(f"Query Type: {result.get('query_type', 'general')}")
     output.append(f"Model: {result['model_used']}")
     output.append(f"Generation time: {result['generation_time']:.2f}s")
     output.append(f"Cost: ${result['cost_estimate']:.6f}")
@@ -336,6 +479,31 @@ def format_answer_output(result: Dict) -> str:
             f"{tokens.get('total_tokens', 0)} total"
         )
 
+    # Show curation statistics
+    if show_curation and result.get('curation_stats'):
+        output.append("\n" + "-" * 80)
+        output.append("CONTEXT CURATION STATISTICS")
+        output.append("-" * 80)
+        stats = result['curation_stats']
+        output.append(f"Input segments: {stats.get('input_segments', 0)}")
+        output.append(f"After quality filter: {stats.get('after_quality_filter', 0)}")
+        output.append(f"After relevance scoring: {stats.get('after_relevance_scoring', 0)}")
+        output.append(f"After NLI scoring: {stats.get('after_nli_scoring', 0)}")
+        output.append(f"Final selected: {stats.get('final_selected', 0)}")
+
+        if stats.get('conflicts_found', 0) > 0:
+            output.append(f"⚠️  Conflicts detected: {stats['conflicts_found']}")
+
+    # Show conflicts
+    if result.get('conflicts_detected'):
+        output.append("\n" + "-" * 80)
+        output.append("⚠️  CONFLICTS DETECTED")
+        output.append("-" * 80)
+        for i, conflict in enumerate(result['conflicts_detected'], 1):
+            output.append(f"{i}. {conflict['description']}")
+            output.append(f"   Resolution: {conflict['resolution']}")
+
+    # Show evidence sources
     output.append("\n" + "-" * 80)
     output.append("EVIDENCE SOURCES")
     output.append("-" * 80)
@@ -346,7 +514,45 @@ def format_answer_output(result: Dict) -> str:
             f"Score: {ev['relevance_score']:.4f}"
         )
 
-    output.append("=" * 80)
+    # Show attribution map
+    if show_attribution and result.get('attribution_map'):
+        output.append("\n" + "-" * 80)
+        output.append("ATTRIBUTION MAP")
+        output.append("-" * 80)
+
+        attr = result['attribution_map']
+        output.append(f"Overall Confidence: {attr['overall_confidence']:.2%}")
+        output.append(f"Unsupported Claims: {attr['unsupported_claims']}/{attr['claim_count']}")
+        output.append(f"Conflicted Claims: {attr['conflicted_claims']}/{attr['claim_count']}")
+
+        output.append("\nClaim-by-Claim Attribution:")
+        for i, claim_attr in enumerate(attr['attribution_map'], 1):
+            level = claim_attr['support_level']
+
+            if level == 'HIGH':
+                indicator = "✅"
+            elif level == 'MEDIUM':
+                indicator = "🟡"
+            elif level == 'LOW':
+                indicator = "🟠"
+            elif level == 'CONFLICTED':
+                indicator = "⚠️"
+            else:
+                indicator = "❌"
+
+            output.append(f"\n{i}. {indicator} [{level}] {claim_attr['claim']}")
+
+            if claim_attr.get('evidence_id'):
+                output.append(f"   Evidence: {claim_attr['video_id']} @ {claim_attr['formatted_time']}")
+                if claim_attr.get('exact_quote'):
+                    quote = claim_attr['exact_quote']
+                    if len(quote) > 100:
+                        quote = quote[:97] + "..."
+                    output.append(f"   Quote: \"{quote}\"")
+            else:
+                output.append(f"   ⚠️  No supporting evidence")
+
+    output.append("\n" + "=" * 80)
 
     return "\n".join(output)
 

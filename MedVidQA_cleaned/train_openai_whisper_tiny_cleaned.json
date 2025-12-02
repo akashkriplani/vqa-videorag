@@ -275,94 +275,6 @@
     "video_url": "https://www.youtube.com/watch?v=JwhN5jRausY"
   },
   {
-    "sample_id": 27,
-    "question": "How to walk with a cane?",
-    "answer_start": "02:33",
-    "answer_end": "03:28",
-    "answer_start_second": 153,
-    "answer_end_second": 208,
-    "video_length": 727,
-    "video_id": "6GzDzV1wBOs",
-    "video_url": "https://www.youtube.com/watch?v=6GzDzV1wBOs"
-  },
-  {
-    "sample_id": 28,
-    "question": "How to exercise the hip for hip pain relief?",
-    "answer_start": "03:37",
-    "answer_end": "05:04",
-    "answer_start_second": 217,
-    "answer_end_second": 304,
-    "video_length": 727,
-    "video_id": "6GzDzV1wBOs",
-    "video_url": "https://www.youtube.com/watch?v=6GzDzV1wBOs"
-  },
-  {
-    "sample_id": 29,
-    "question": "How to stretch the hip for pain relief?",
-    "answer_start": "05:39",
-    "answer_end": "06:55",
-    "answer_start_second": 339,
-    "answer_end_second": 415,
-    "video_length": 727,
-    "video_id": "6GzDzV1wBOs",
-    "video_url": "https://www.youtube.com/watch?v=6GzDzV1wBOs"
-  },
-  {
-    "sample_id": 30,
-    "question": "How to externally rotate the hip for pain relief from arthritis?",
-    "answer_start": "06:56",
-    "answer_end": "08:32",
-    "answer_start_second": 416,
-    "answer_end_second": 512,
-    "video_length": 727,
-    "video_id": "6GzDzV1wBOs",
-    "video_url": "https://www.youtube.com/watch?v=6GzDzV1wBOs"
-  },
-  {
-    "sample_id": 31,
-    "question": "How to stretch hip flexors for hip pain relief?",
-    "answer_start": "10:09",
-    "answer_end": "11:26",
-    "answer_start_second": 609,
-    "answer_end_second": 686,
-    "video_length": 727,
-    "video_id": "6GzDzV1wBOs",
-    "video_url": "https://www.youtube.com/watch?v=6GzDzV1wBOs"
-  },
-  {
-    "sample_id": 32,
-    "question": "How to perform head-tilt chin-lift maneuver?",
-    "answer_start": "01:44",
-    "answer_end": "02:09",
-    "answer_start_second": 104,
-    "answer_end_second": 129,
-    "video_length": 216,
-    "video_id": "HIwIusfXhkM",
-    "video_url": "https://www.youtube.com/watch?v=HIwIusfXhkM"
-  },
-  {
-    "sample_id": 33,
-    "question": "How to perform the Heimlich maneuver for choking?",
-    "answer_start": "00:57",
-    "answer_end": "01:29",
-    "answer_start_second": 57,
-    "answer_end_second": 89,
-    "video_length": 216,
-    "video_id": "HIwIusfXhkM",
-    "video_url": "https://www.youtube.com/watch?v=HIwIusfXhkM"
-  },
-  {
-    "sample_id": 34,
-    "question": "How to perform Heimlich maneuver on infants for choking?",
-    "answer_start": "02:10",
-    "answer_end": "02:40",
-    "answer_start_second": 130,
-    "answer_end_second": 160,
-    "video_length": 216,
-    "video_id": "HIwIusfXhkM",
-    "video_url": "https://www.youtube.com/watch?v=HIwIusfXhkM"
-  },
-  {
     "sample_id": 35,
     "question": "How does a chiropractor treat popliteus muscle injury?",
     "answer_start": "03:55",
@@ -1210,28 +1122,6 @@
     "video_url": "https://www.youtube.com/watch?v=21s9tRvo_x4"
   },
   {
-    "sample_id": 114,
-    "question": "How to use an asthma inhaler?",
-    "answer_start": "00:47",
-    "answer_end": "01:18",
-    "answer_start_second": 47,
-    "answer_end_second": 78,
-    "video_length": 88,
-    "video_id": "eRnjMSHYbXI",
-    "video_url": "https://www.youtube.com/watch?v=eRnjMSHYbXI"
-  },
-  {
-    "sample_id": 115,
-    "question": "How do you apply a pressure bandage to stop bleeding?",
-    "answer_start": "00:10",
-    "answer_end": "02:27",
-    "answer_start_second": 10,
-    "answer_end_second": 147,
-    "video_length": 156,
-    "video_id": "1vnjCOq4rGQ",
-    "video_url": "https://www.youtube.com/watch?v=1vnjCOq4rGQ"
-  },
-  {
     "sample_id": 116,
     "question": "How to heal rotator cuff tears?",
     "answer_start": "01:44",
@@ -1241,28 +1131,6 @@
     "video_length": 311,
     "video_id": "Qaez8OKf-eE",
     "video_url": "https://www.youtube.com/watch?v=Qaez8OKf-eE"
-  },
-  {
-    "sample_id": 117,
-    "question": "How to stretch the lower back to fix bulging disc pain?",
-    "answer_start": "02:11",
-    "answer_end": "04:06",
-    "answer_start_second": 131,
-    "answer_end_second": 246,
-    "video_length": 329,
-    "video_id": "SPAQJIKakm0",
-    "video_url": "https://www.youtube.com/watch?v=SPAQJIKakm0"
-  },
-  {
-    "sample_id": 118,
-    "question": "How to stretch the lower back with a pillow to fix bulging disc pain?",
-    "answer_start": "04:06",
-    "answer_end": "04:45",
-    "answer_start_second": 246,
-    "answer_end_second": 285,
-    "video_length": 329,
-    "video_id": "SPAQJIKakm0",
-    "video_url": "https://www.youtube.com/watch?v=SPAQJIKakm0"
   },
   {
     "sample_id": 119,
@@ -1978,50 +1846,6 @@
     "video_length": 432,
     "video_id": "OLV03UgOLRE",
     "video_url": "https://www.youtube.com/watch?v=OLV03UgOLRE"
-  },
-  {
-    "sample_id": 184,
-    "question": "How to assess the causes that limit overhead mobility?",
-    "answer_start": "06:34",
-    "answer_end": "09:23",
-    "answer_start_second": 394,
-    "answer_end_second": 563,
-    "video_length": 876,
-    "video_id": "YP-QZTenli4",
-    "video_url": "https://www.youtube.com/watch?v=YP-QZTenli4"
-  },
-  {
-    "sample_id": 185,
-    "question": "How to improve overhead mobility by exercising with foam roll?",
-    "answer_start": "09:24",
-    "answer_end": "11:42",
-    "answer_start_second": 564,
-    "answer_end_second": 702,
-    "video_length": 876,
-    "video_id": "YP-QZTenli4",
-    "video_url": "https://www.youtube.com/watch?v=YP-QZTenli4"
-  },
-  {
-    "sample_id": 186,
-    "question": "How one can improve overhead mobility by lying on their front?",
-    "answer_start": "11:43",
-    "answer_end": "12:55",
-    "answer_start_second": 703,
-    "answer_end_second": 775,
-    "video_length": 876,
-    "video_id": "YP-QZTenli4",
-    "video_url": "https://www.youtube.com/watch?v=YP-QZTenli4"
-  },
-  {
-    "sample_id": 187,
-    "question": "How one can improve overhead mobility by strengthening the shoulder muscles with weight?",
-    "answer_start": "12:56",
-    "answer_end": "13:47",
-    "answer_start_second": 776,
-    "answer_end_second": 827,
-    "video_length": 876,
-    "video_id": "YP-QZTenli4",
-    "video_url": "https://www.youtube.com/watch?v=YP-QZTenli4"
   },
   {
     "sample_id": 188,
@@ -3091,39 +2915,6 @@
     "video_url": "https://www.youtube.com/watch?v=fKzdiuseEIw"
   },
   {
-    "sample_id": 287,
-    "question": "How to stop chest pain by exercise?",
-    "answer_start": "08:22",
-    "answer_end": "08:54",
-    "answer_start_second": 502,
-    "answer_end_second": 534,
-    "video_length": 831,
-    "video_id": "4HWQvO2lLlA",
-    "video_url": "https://www.youtube.com/watch?v=4HWQvO2lLlA"
-  },
-  {
-    "sample_id": 288,
-    "question": "How to put the ball on the back?",
-    "answer_start": "09:09",
-    "answer_end": "09:37",
-    "answer_start_second": 549,
-    "answer_end_second": 577,
-    "video_length": 831,
-    "video_id": "4HWQvO2lLlA",
-    "video_url": "https://www.youtube.com/watch?v=4HWQvO2lLlA"
-  },
-  {
-    "sample_id": 289,
-    "question": "How to use back pod to help chest pain?",
-    "answer_start": "10:45",
-    "answer_end": "12:18",
-    "answer_start_second": 645,
-    "answer_end_second": 738,
-    "video_length": 831,
-    "video_id": "4HWQvO2lLlA",
-    "video_url": "https://www.youtube.com/watch?v=4HWQvO2lLlA"
-  },
-  {
     "sample_id": 290,
     "question": "How to stretch while in bed to relieve lower back and sciatica pain?",
     "answer_start": "00:53",
@@ -3828,17 +3619,6 @@
     "video_url": "https://www.youtube.com/watch?v=rXAF6ys3U6o"
   },
   {
-    "sample_id": 361,
-    "question": "How to improve your sense of smell with training?",
-    "answer_start": "00:33",
-    "answer_end": "03:29",
-    "answer_start_second": 33,
-    "answer_end_second": 209,
-    "video_length": 369,
-    "video_id": "HPakYXHCAmg",
-    "video_url": "https://www.youtube.com/watch?v=HPakYXHCAmg"
-  },
-  {
     "sample_id": 362,
     "question": "How to use an AED?",
     "answer_start": "00:12",
@@ -4002,72 +3782,6 @@
     "video_length": 268,
     "video_id": "5KML9y1ZIAk",
     "video_url": "https://www.youtube.com/watch?v=5KML9y1ZIAk"
-  },
-  {
-    "sample_id": 377,
-    "question": "How to test if you have rounded shoulders?",
-    "answer_start": "01:17",
-    "answer_end": "02:23",
-    "answer_start_second": 77,
-    "answer_end_second": 143,
-    "video_length": 734,
-    "video_id": "o3JuzlS8lps",
-    "video_url": "https://www.youtube.com/watch?v=o3JuzlS8lps"
-  },
-  {
-    "sample_id": 378,
-    "question": "How to use tennis balls to fix rounded shoulders?",
-    "answer_start": "02:33",
-    "answer_end": "05:28",
-    "answer_start_second": 153,
-    "answer_end_second": 328,
-    "video_length": 734,
-    "video_id": "o3JuzlS8lps",
-    "video_url": "https://www.youtube.com/watch?v=o3JuzlS8lps"
-  },
-  {
-    "sample_id": 379,
-    "question": "How to use a soft ball and chair to fix rounded shoulders?",
-    "answer_start": "05:28",
-    "answer_end": "07:12",
-    "answer_start_second": 328,
-    "answer_end_second": 432,
-    "video_length": 734,
-    "video_id": "o3JuzlS8lps",
-    "video_url": "https://www.youtube.com/watch?v=o3JuzlS8lps"
-  },
-  {
-    "sample_id": 380,
-    "question": "How to use a corner to fix rounded shoulders?",
-    "answer_start": "07:12",
-    "answer_end": "07:59",
-    "answer_start_second": 432,
-    "answer_end_second": 479,
-    "video_length": 734,
-    "video_id": "o3JuzlS8lps",
-    "video_url": "https://www.youtube.com/watch?v=o3JuzlS8lps"
-  },
-  {
-    "sample_id": 381,
-    "question": "How to use a stretch band to fix rounded shoulders?",
-    "answer_start": "07:59",
-    "answer_end": "10:37",
-    "answer_start_second": 479,
-    "answer_end_second": 637,
-    "video_length": 734,
-    "video_id": "o3JuzlS8lps",
-    "video_url": "https://www.youtube.com/watch?v=o3JuzlS8lps"
-  },
-  {
-    "sample_id": 382,
-    "question": "How to use a pillow to fix rounded shoulders?",
-    "answer_start": "10:37",
-    "answer_end": "11:27",
-    "answer_start_second": 637,
-    "answer_end_second": 687,
-    "video_length": 734,
-    "video_id": "o3JuzlS8lps",
-    "video_url": "https://www.youtube.com/watch?v=o3JuzlS8lps"
   },
   {
     "sample_id": 383,
@@ -4994,28 +4708,6 @@
     "video_url": "https://www.youtube.com/watch?v=ZWu9MSC6WMw"
   },
   {
-    "sample_id": 476,
-    "question": "How to use an automated external defibrillator?",
-    "answer_start": "11:36",
-    "answer_end": "12:03",
-    "answer_start_second": 696,
-    "answer_end_second": 723,
-    "video_length": 809,
-    "video_id": "SJsD7y7skhM",
-    "video_url": "https://www.youtube.com/watch?v=SJsD7y7skhM"
-  },
-  {
-    "sample_id": 477,
-    "question": "How to do CPR in an unconscious adult?",
-    "answer_start": "02:53",
-    "answer_end": "03:14",
-    "answer_start_second": 173,
-    "answer_end_second": 194,
-    "video_length": 809,
-    "video_id": "SJsD7y7skhM",
-    "video_url": "https://www.youtube.com/watch?v=SJsD7y7skhM"
-  },
-  {
     "sample_id": 478,
     "question": "How to treat a pinched nerve, rheumatoid arthritis, and Parkinsons disease?",
     "answer_start": "01:38",
@@ -5069,28 +4761,6 @@
     "video_length": 253,
     "video_id": "Q1XiNiv-pX8",
     "video_url": "https://www.youtube.com/watch?v=Q1XiNiv-pX8"
-  },
-  {
-    "sample_id": 483,
-    "question": "How to visually identify skin cancer?",
-    "answer_start": "01:24",
-    "answer_end": "01:56",
-    "answer_start_second": 84,
-    "answer_end_second": 116,
-    "video_length": 336,
-    "video_id": "1LZDYdbBCpk",
-    "video_url": "https://www.youtube.com/watch?v=1LZDYdbBCpk"
-  },
-  {
-    "sample_id": 484,
-    "question": "How to identify proper sunscreen?",
-    "answer_start": "04:09",
-    "answer_end": "05:01",
-    "answer_start_second": 249,
-    "answer_end_second": 301,
-    "video_length": 336,
-    "video_id": "1LZDYdbBCpk",
-    "video_url": "https://www.youtube.com/watch?v=1LZDYdbBCpk"
   },
   {
     "sample_id": 485,
@@ -6050,17 +5720,6 @@
     "video_url": "https://www.youtube.com/watch?v=vI7VkPKoIAE"
   },
   {
-    "sample_id": 578,
-    "question": "How to draw blood using a tube holder?",
-    "answer_start": "00:15",
-    "answer_end": "02:59",
-    "answer_start_second": 15,
-    "answer_end_second": 179,
-    "video_length": 210,
-    "video_id": "ERagNBUvyUc",
-    "video_url": "https://www.youtube.com/watch?v=ERagNBUvyUc"
-  },
-  {
     "sample_id": 579,
     "question": "How to identify the cause of knee pain?",
     "answer_start": "00:29",
@@ -6213,17 +5872,6 @@
     "video_length": 618,
     "video_id": "UI5AQhYUrpc",
     "video_url": "https://www.youtube.com/watch?v=UI5AQhYUrpc"
-  },
-  {
-    "sample_id": 593,
-    "question": "How to clear a stuffy nose?",
-    "answer_start": "00:17",
-    "answer_end": "00:31",
-    "answer_start_second": 17,
-    "answer_end_second": 31,
-    "video_length": 90,
-    "video_id": "b6r6oHI8G_Q",
-    "video_url": "https://www.youtube.com/watch?v=b6r6oHI8G_Q"
   },
   {
     "sample_id": 594,
@@ -6455,50 +6103,6 @@
     "video_length": 499,
     "video_id": "rb6Hz16fBxY",
     "video_url": "https://www.youtube.com/watch?v=rb6Hz16fBxY"
-  },
-  {
-    "sample_id": 615,
-    "question": "How to practice walking in a hospital after suffering a stroke? ",
-    "answer_start": "00:12",
-    "answer_end": "00:42",
-    "answer_start_second": 12,
-    "answer_end_second": 42,
-    "video_length": 226,
-    "video_id": "g__BYaS9viw",
-    "video_url": "https://www.youtube.com/watch?v=g__BYaS9viw"
-  },
-  {
-    "sample_id": 616,
-    "question": "How to practice walking on stairs after suffering a stroke? ",
-    "answer_start": "00:42",
-    "answer_end": "02:08",
-    "answer_start_second": 42,
-    "answer_end_second": 128,
-    "video_length": 226,
-    "video_id": "g__BYaS9viw",
-    "video_url": "https://www.youtube.com/watch?v=g__BYaS9viw"
-  },
-  {
-    "sample_id": 617,
-    "question": "How to practice walking after suffering a stroke with small hurdles? ",
-    "answer_start": "02:08",
-    "answer_end": "02:44",
-    "answer_start_second": 128,
-    "answer_end_second": 164,
-    "video_length": 226,
-    "video_id": "g__BYaS9viw",
-    "video_url": "https://www.youtube.com/watch?v=g__BYaS9viw"
-  },
-  {
-    "sample_id": 618,
-    "question": "How to practice walking with a cane after suffering a stroke? ",
-    "answer_start": "02:44",
-    "answer_end": "03:33",
-    "answer_start_second": 164,
-    "answer_end_second": 213,
-    "video_length": 226,
-    "video_id": "g__BYaS9viw",
-    "video_url": "https://www.youtube.com/watch?v=g__BYaS9viw"
   },
   {
     "sample_id": 619,
@@ -7623,39 +7227,6 @@
     "video_url": "https://www.youtube.com/watch?v=i-KjwNb2o9Q"
   },
   {
-    "sample_id": 724,
-    "question": "How to improve neck posture by stretching the tucked neck?",
-    "answer_start": "00:20",
-    "answer_end": "01:23",
-    "answer_start_second": 20,
-    "answer_end_second": 83,
-    "video_length": 358,
-    "video_id": "j6ItyU5zU2g",
-    "video_url": "https://www.youtube.com/watch?v=j6ItyU5zU2g"
-  },
-  {
-    "sample_id": 725,
-    "question": "How to improve neck posture by stretching the side of the neck?",
-    "answer_start": "01:24",
-    "answer_end": "03:23",
-    "answer_start_second": 84,
-    "answer_end_second": 203,
-    "video_length": 358,
-    "video_id": "j6ItyU5zU2g",
-    "video_url": "https://www.youtube.com/watch?v=j6ItyU5zU2g"
-  },
-  {
-    "sample_id": 726,
-    "question": "How to improve neck posture by performing chin tucks with forehead presses?",
-    "answer_start": "03:23",
-    "answer_end": "05:34",
-    "answer_start_second": 203,
-    "answer_end_second": 334,
-    "video_length": 358,
-    "video_id": "j6ItyU5zU2g",
-    "video_url": "https://www.youtube.com/watch?v=j6ItyU5zU2g"
-  },
-  {
     "sample_id": 727,
     "question": "How to properly use a nebulizer?",
     "answer_start": "00:10",
@@ -7799,17 +7370,6 @@
     "video_url": "https://www.youtube.com/watch?v=pEKFKZiLNaA"
   },
   {
-    "sample_id": 740,
-    "question": "How to prepare for and check into a bone density scan?",
-    "answer_start": "00:11",
-    "answer_end": "00:54",
-    "answer_start_second": 11,
-    "answer_end_second": 54,
-    "video_length": 112,
-    "video_id": "n6F6DO4BUAU",
-    "video_url": "https://www.youtube.com/watch?v=n6F6DO4BUAU"
-  },
-  {
     "sample_id": 741,
     "question": "How to pull up the neck to get pain relief from a neck bulging disc pain?",
     "answer_start": "01:03",
@@ -7940,39 +7500,6 @@
     "video_length": 748,
     "video_id": "mH6s-tvD_JA",
     "video_url": "https://www.youtube.com/watch?v=mH6s-tvD_JA"
-  },
-  {
-    "sample_id": 753,
-    "question": "How to check if an unconscious person is breathing?",
-    "answer_start": "01:26",
-    "answer_end": "01:37",
-    "answer_start_second": 86,
-    "answer_end_second": 97,
-    "video_length": 184,
-    "video_id": "HpGGbPqYHy0",
-    "video_url": "https://www.youtube.com/watch?v=HpGGbPqYHy0"
-  },
-  {
-    "sample_id": 754,
-    "question": "How to place an unconscious person who is breathing in the recovery position?",
-    "answer_start": "01:37",
-    "answer_end": "01:57",
-    "answer_start_second": 97,
-    "answer_end_second": 117,
-    "video_length": 184,
-    "video_id": "HpGGbPqYHy0",
-    "video_url": "https://www.youtube.com/watch?v=HpGGbPqYHy0"
-  },
-  {
-    "sample_id": 755,
-    "question": "How to treat an unconscious person?",
-    "answer_start": "02:05",
-    "answer_end": "02:35",
-    "answer_start_second": 125,
-    "answer_end_second": 155,
-    "video_length": 184,
-    "video_id": "HpGGbPqYHy0",
-    "video_url": "https://www.youtube.com/watch?v=HpGGbPqYHy0"
   },
   {
     "sample_id": 759,
@@ -8732,94 +8259,6 @@
     "video_length": 314,
     "video_id": "sOhtqC6T_UQ",
     "video_url": "https://www.youtube.com/watch?v=sOhtqC6T_UQ"
-  },
-  {
-    "sample_id": 840,
-    "question": "How to stop bleeding with a tourniquet?",
-    "answer_start": "01:15",
-    "answer_end": "02:50",
-    "answer_start_second": 75,
-    "answer_end_second": 170,
-    "video_length": 286,
-    "video_id": "5IMA4PLHUsk",
-    "video_url": "https://www.youtube.com/watch?v=5IMA4PLHUsk"
-  },
-  {
-    "sample_id": 841,
-    "question": "How to perform finger taps to increase range of motion?",
-    "answer_start": "02:03",
-    "answer_end": "02:25",
-    "answer_start_second": 123,
-    "answer_end_second": 145,
-    "video_length": 690,
-    "video_id": "-UtPZqNQuHU",
-    "video_url": "https://www.youtube.com/watch?v=-UtPZqNQuHU"
-  },
-  {
-    "sample_id": 842,
-    "question": "How to perform stretch the thumb to increase range of motion?",
-    "answer_start": "02:26",
-    "answer_end": "03:06",
-    "answer_start_second": 146,
-    "answer_end_second": 186,
-    "video_length": 690,
-    "video_id": "-UtPZqNQuHU",
-    "video_url": "https://www.youtube.com/watch?v=-UtPZqNQuHU"
-  },
-  {
-    "sample_id": 843,
-    "question": "How to perform tabletop to claw poses to increase range of motion in the fingers?",
-    "answer_start": "03:07",
-    "answer_end": "03:41",
-    "answer_start_second": 187,
-    "answer_end_second": 221,
-    "video_length": 690,
-    "video_id": "-UtPZqNQuHU",
-    "video_url": "https://www.youtube.com/watch?v=-UtPZqNQuHU"
-  },
-  {
-    "sample_id": 844,
-    "question": "How to perform full hand flexion to increase range of motion in the fingers?",
-    "answer_start": "03:41",
-    "answer_end": "03:53",
-    "answer_start_second": 221,
-    "answer_end_second": 233,
-    "video_length": 690,
-    "video_id": "-UtPZqNQuHU",
-    "video_url": "https://www.youtube.com/watch?v=-UtPZqNQuHU"
-  },
-  {
-    "sample_id": 845,
-    "question": "How to push the finger bones to aid jammed fingers?",
-    "answer_start": "03:53",
-    "answer_end": "06:05",
-    "answer_start_second": 233,
-    "answer_end_second": 365,
-    "video_length": 690,
-    "video_id": "-UtPZqNQuHU",
-    "video_url": "https://www.youtube.com/watch?v=-UtPZqNQuHU"
-  },
-  {
-    "sample_id": 846,
-    "question": "How to use traction to aid jammed fingers?",
-    "answer_start": "06:06",
-    "answer_end": "06:33",
-    "answer_start_second": 366,
-    "answer_end_second": 393,
-    "video_length": 690,
-    "video_id": "-UtPZqNQuHU",
-    "video_url": "https://www.youtube.com/watch?v=-UtPZqNQuHU"
-  },
-  {
-    "sample_id": 847,
-    "question": "How to use block the finger joint to relieve finger pain?",
-    "answer_start": "06:33",
-    "answer_end": "07:12",
-    "answer_start_second": 393,
-    "answer_end_second": 432,
-    "video_length": 690,
-    "video_id": "-UtPZqNQuHU",
-    "video_url": "https://www.youtube.com/watch?v=-UtPZqNQuHU"
   },
   {
     "sample_id": 850,
@@ -10142,105 +9581,6 @@
     "video_url": "https://www.youtube.com/watch?v=iUVY4CpI7vI"
   },
   {
-    "sample_id": 992,
-    "question": "How to perform squats with a chair to treat osteoporosis?",
-    "answer_start": "03:32",
-    "answer_end": "05:35",
-    "answer_start_second": 212,
-    "answer_end_second": 335,
-    "video_length": 733,
-    "video_id": "gv_0UT_bIXw",
-    "video_url": "https://www.youtube.com/watch?v=gv_0UT_bIXw"
-  },
-  {
-    "sample_id": 993,
-    "question": "How to perform squats with a large yoga ball to treat osteoporosis?",
-    "answer_start": "05:35",
-    "answer_end": "06:46",
-    "answer_start_second": 335,
-    "answer_end_second": 406,
-    "video_length": 733,
-    "video_id": "gv_0UT_bIXw",
-    "video_url": "https://www.youtube.com/watch?v=gv_0UT_bIXw"
-  },
-  {
-    "sample_id": 994,
-    "question": "How to perform high marches with a chair to treat osteoporosis?",
-    "answer_start": "06:47",
-    "answer_end": "07:09",
-    "answer_start_second": 407,
-    "answer_end_second": 429,
-    "video_length": 733,
-    "video_id": "gv_0UT_bIXw",
-    "video_url": "https://www.youtube.com/watch?v=gv_0UT_bIXw"
-  },
-  {
-    "sample_id": 995,
-    "question": "How to perform lunges with a chair to treat osteoporosis?",
-    "answer_start": "07:10",
-    "answer_end": "08:08",
-    "answer_start_second": 430,
-    "answer_end_second": 488,
-    "video_length": 733,
-    "video_id": "gv_0UT_bIXw",
-    "video_url": "https://www.youtube.com/watch?v=gv_0UT_bIXw"
-  },
-  {
-    "sample_id": 996,
-    "question": "How to perform side lunges to treat osteoporosis?",
-    "answer_start": "08:08",
-    "answer_end": "08:35",
-    "answer_start_second": 488,
-    "answer_end_second": 515,
-    "video_length": 733,
-    "video_id": "gv_0UT_bIXw",
-    "video_url": "https://www.youtube.com/watch?v=gv_0UT_bIXw"
-  },
-  {
-    "sample_id": 997,
-    "question": "How to perform step ups to treat osteoporosis?",
-    "answer_start": "08:37",
-    "answer_end": "09:22",
-    "answer_start_second": 517,
-    "answer_end_second": 562,
-    "video_length": 733,
-    "video_id": "gv_0UT_bIXw",
-    "video_url": "https://www.youtube.com/watch?v=gv_0UT_bIXw"
-  },
-  {
-    "sample_id": 998,
-    "question": "How to perform push ups on a wall or surface to treat osteoporosis?",
-    "answer_start": "09:40",
-    "answer_end": "10:13",
-    "answer_start_second": 580,
-    "answer_end_second": 613,
-    "video_length": 733,
-    "video_id": "gv_0UT_bIXw",
-    "video_url": "https://www.youtube.com/watch?v=gv_0UT_bIXw"
-  },
-  {
-    "sample_id": 999,
-    "question": "How to perform squats and presses with resistance bands to treat osteoporosis?",
-    "answer_start": "10:14",
-    "answer_end": "11:04",
-    "answer_start_second": 614,
-    "answer_end_second": 664,
-    "video_length": 733,
-    "video_id": "gv_0UT_bIXw",
-    "video_url": "https://www.youtube.com/watch?v=gv_0UT_bIXw"
-  },
-  {
-    "sample_id": 1000,
-    "question": "How to perform side lunges with resistance bands to treat osteoporosis?",
-    "answer_start": "11:05",
-    "answer_end": "11:46",
-    "answer_start_second": 665,
-    "answer_end_second": 706,
-    "video_length": 733,
-    "video_id": "gv_0UT_bIXw",
-    "video_url": "https://www.youtube.com/watch?v=gv_0UT_bIXw"
-  },
-  {
     "sample_id": 1001,
     "question": "How to recognize if someone has a stroke?",
     "answer_start": "03:40",
@@ -10261,83 +9601,6 @@
     "video_length": 164,
     "video_id": "VfQjuiZf5DI",
     "video_url": "https://www.youtube.com/watch?v=VfQjuiZf5DI"
-  },
-  {
-    "sample_id": 1003,
-    "question": "How to self-massage the foot with oil and a spoon for pain relief?",
-    "answer_start": "00:36",
-    "answer_end": "03:27",
-    "answer_start_second": 36,
-    "answer_end_second": 207,
-    "video_length": 789,
-    "video_id": "JVeNUGCXDV0",
-    "video_url": "https://www.youtube.com/watch?v=JVeNUGCXDV0"
-  },
-  {
-    "sample_id": 1004,
-    "question": "How to self-massage the leg with a spoon for pain relief?",
-    "answer_start": "03:27",
-    "answer_end": "04:35",
-    "answer_start_second": 207,
-    "answer_end_second": 275,
-    "video_length": 789,
-    "video_id": "JVeNUGCXDV0",
-    "video_url": "https://www.youtube.com/watch?v=JVeNUGCXDV0"
-  },
-  {
-    "sample_id": 1005,
-    "question": "How to self-massage the foot with a tennis ball for pain relief?",
-    "answer_start": "04:36",
-    "answer_end": "05:59",
-    "answer_start_second": 276,
-    "answer_end_second": 359,
-    "video_length": 789,
-    "video_id": "JVeNUGCXDV0",
-    "video_url": "https://www.youtube.com/watch?v=JVeNUGCXDV0"
-  },
-  {
-    "sample_id": 1006,
-    "question": "How to stretch the foot for heel pain relief?",
-    "answer_start": "05:59",
-    "answer_end": "10:09",
-    "answer_start_second": 359,
-    "answer_end_second": 609,
-    "video_length": 789,
-    "video_id": "JVeNUGCXDV0",
-    "video_url": "https://www.youtube.com/watch?v=JVeNUGCXDV0"
-  },
-  {
-    "sample_id": 1007,
-    "question": "How to stretch the calf leg muscle for heel pain relief?",
-    "answer_start": "10:09",
-    "answer_end": "11:26",
-    "answer_start_second": 609,
-    "answer_end_second": 686,
-    "video_length": 789,
-    "video_id": "JVeNUGCXDV0",
-    "video_url": "https://www.youtube.com/watch?v=JVeNUGCXDV0"
-  },
-  {
-    "sample_id": 1008,
-    "question": "How to strengthen the calf leg muscle for heel pain relief?",
-    "answer_start": "11:27",
-    "answer_end": "12:10",
-    "answer_start_second": 687,
-    "answer_end_second": 730,
-    "video_length": 789,
-    "video_id": "JVeNUGCXDV0",
-    "video_url": "https://www.youtube.com/watch?v=JVeNUGCXDV0"
-  },
-  {
-    "sample_id": 1009,
-    "question": "How to massage the heel with ice for heel pain relief?",
-    "answer_start": "12:10",
-    "answer_end": "12:58",
-    "answer_start_second": 730,
-    "answer_end_second": 778,
-    "video_length": 789,
-    "video_id": "JVeNUGCXDV0",
-    "video_url": "https://www.youtube.com/watch?v=JVeNUGCXDV0"
   },
   {
     "sample_id": 1010,
@@ -11715,61 +10978,6 @@
     "video_url": "https://www.youtube.com/watch?v=hApx528g0Xk"
   },
   {
-    "sample_id": 1160,
-    "question": "How can i get rid of pain in my jaw with resisted open and close exercises? ",
-    "answer_start": "00:36",
-    "answer_end": "01:01",
-    "answer_start_second": 36,
-    "answer_end_second": 61,
-    "video_length": 160,
-    "video_id": "RYYkd74EhHo",
-    "video_url": "https://www.youtube.com/watch?v=RYYkd74EhHo"
-  },
-  {
-    "sample_id": 1161,
-    "question": "How can i relax my jaw to reduce pain? ",
-    "answer_start": "01:02",
-    "answer_end": "01:11",
-    "answer_start_second": 62,
-    "answer_end_second": 71,
-    "video_length": 160,
-    "video_id": "RYYkd74EhHo",
-    "video_url": "https://www.youtube.com/watch?v=RYYkd74EhHo"
-  },
-  {
-    "sample_id": 1162,
-    "question": "How can i get rid of pain in my jaw using \"goldfish\" exercise? ",
-    "answer_start": "01:13",
-    "answer_end": "01:23",
-    "answer_start_second": 73,
-    "answer_end_second": 83,
-    "video_length": 160,
-    "video_id": "RYYkd74EhHo",
-    "video_url": "https://www.youtube.com/watch?v=RYYkd74EhHo"
-  },
-  {
-    "sample_id": 1163,
-    "question": "What chin tuck and side-to-side exercises will relieve jaw pain? ",
-    "answer_start": "01:24",
-    "answer_end": "01:42",
-    "answer_start_second": 84,
-    "answer_end_second": 102,
-    "video_length": 160,
-    "video_id": "RYYkd74EhHo",
-    "video_url": "https://www.youtube.com/watch?v=RYYkd74EhHo"
-  },
-  {
-    "sample_id": 1164,
-    "question": "What back and forth exercises will relieve jaw pain? ",
-    "answer_start": "01:46",
-    "answer_end": "01:55",
-    "answer_start_second": 106,
-    "answer_end_second": 115,
-    "video_length": 160,
-    "video_id": "RYYkd74EhHo",
-    "video_url": "https://www.youtube.com/watch?v=RYYkd74EhHo"
-  },
-  {
     "sample_id": 1165,
     "question": "How do I walk with crutches?",
     "answer_start": "00:00",
@@ -11867,17 +11075,6 @@
     "video_length": 332,
     "video_id": "5UkYKwHIQyU",
     "video_url": "https://www.youtube.com/watch?v=5UkYKwHIQyU"
-  },
-  {
-    "sample_id": 1174,
-    "question": "How to measure the jaw opening?",
-    "answer_start": "01:39",
-    "answer_end": "01:50",
-    "answer_start_second": 99,
-    "answer_end_second": 110,
-    "video_length": 1105,
-    "video_id": "IDQEsVc0SdE",
-    "video_url": "https://www.youtube.com/watch?v=IDQEsVc0SdE"
   },
   {
     "sample_id": 1175,
@@ -12111,61 +11308,6 @@
     "video_url": "https://www.youtube.com/watch?v=jYtJS1PtNq0"
   },
   {
-    "sample_id": 1198,
-    "question": "How to massage the knee after the knee injury? ",
-    "answer_start": "00:31",
-    "answer_end": "01:40",
-    "answer_start_second": 31,
-    "answer_end_second": 100,
-    "video_length": 464,
-    "video_id": "35zoRRUDVYo",
-    "video_url": "https://www.youtube.com/watch?v=35zoRRUDVYo"
-  },
-  {
-    "sample_id": 1199,
-    "question": "How can I do an active range of movements for the knee?",
-    "answer_start": "01:45",
-    "answer_end": "02:58",
-    "answer_start_second": 105,
-    "answer_end_second": 178,
-    "video_length": 464,
-    "video_id": "35zoRRUDVYo",
-    "video_url": "https://www.youtube.com/watch?v=35zoRRUDVYo"
-  },
-  {
-    "sample_id": 1200,
-    "question": "How can I exercise to strengthen my hamstring?",
-    "answer_start": "03:33",
-    "answer_end": "04:56",
-    "answer_start_second": 213,
-    "answer_end_second": 296,
-    "video_length": 464,
-    "video_id": "35zoRRUDVYo",
-    "video_url": "https://www.youtube.com/watch?v=35zoRRUDVYo"
-  },
-  {
-    "sample_id": 1201,
-    "question": "How can I do squats after the knee injury? ",
-    "answer_start": "05:15",
-    "answer_end": "05:48",
-    "answer_start_second": 315,
-    "answer_end_second": 348,
-    "video_length": 464,
-    "video_id": "35zoRRUDVYo",
-    "video_url": "https://www.youtube.com/watch?v=35zoRRUDVYo"
-  },
-  {
-    "sample_id": 1202,
-    "question": "How can I do squats using blocks to strengthen the knee?",
-    "answer_start": "06:03",
-    "answer_end": "06:44",
-    "answer_start_second": 363,
-    "answer_end_second": 404,
-    "video_length": 464,
-    "video_id": "35zoRRUDVYo",
-    "video_url": "https://www.youtube.com/watch?v=35zoRRUDVYo"
-  },
-  {
     "sample_id": 1203,
     "question": "How to do a mouth cancer check at home?",
     "answer_start": "00:35",
@@ -12340,61 +11482,6 @@
     "video_length": 263,
     "video_id": "wt1QQE3ZIN8",
     "video_url": "https://www.youtube.com/watch?v=wt1QQE3ZIN8"
-  },
-  {
-    "sample_id": 1220,
-    "question": "How to perform a posterior tilt exercise while lying down to treat spondylolisthesis?",
-    "answer_start": "04:40",
-    "answer_end": "06:03",
-    "answer_start_second": 280,
-    "answer_end_second": 363,
-    "video_length": 977,
-    "video_id": "jzcKlm0jo8w",
-    "video_url": "https://www.youtube.com/watch?v=jzcKlm0jo8w"
-  },
-  {
-    "sample_id": 1221,
-    "question": "How to perform a modified dead bug exercise to treat spondylolisthesis?",
-    "answer_start": "06:03",
-    "answer_end": "08:30",
-    "answer_start_second": 363,
-    "answer_end_second": 510,
-    "video_length": 977,
-    "video_id": "jzcKlm0jo8w",
-    "video_url": "https://www.youtube.com/watch?v=jzcKlm0jo8w"
-  },
-  {
-    "sample_id": 1222,
-    "question": "How to perform hip raises to treat spondylolisthesis?",
-    "answer_start": "08:34",
-    "answer_end": "10:26",
-    "answer_start_second": 514,
-    "answer_end_second": 626,
-    "video_length": 977,
-    "video_id": "jzcKlm0jo8w",
-    "video_url": "https://www.youtube.com/watch?v=jzcKlm0jo8w"
-  },
-  {
-    "sample_id": 1223,
-    "question": "How to stretch the hip to treat spondylolisthesis?",
-    "answer_start": "10:33",
-    "answer_end": "12:49",
-    "answer_start_second": 633,
-    "answer_end_second": 769,
-    "video_length": 977,
-    "video_id": "jzcKlm0jo8w",
-    "video_url": "https://www.youtube.com/watch?v=jzcKlm0jo8w"
-  },
-  {
-    "sample_id": 1224,
-    "question": "How to stretch the hamstring to treat spondylolisthesis?",
-    "answer_start": "12:49",
-    "answer_end": "15:12",
-    "answer_start_second": 769,
-    "answer_end_second": 912,
-    "video_length": 977,
-    "video_id": "jzcKlm0jo8w",
-    "video_url": "https://www.youtube.com/watch?v=jzcKlm0jo8w"
   },
   {
     "sample_id": 1225,
@@ -12826,28 +11913,6 @@
     "video_url": "https://www.youtube.com/watch?v=Xu6OUXMgKQQ"
   },
   {
-    "sample_id": 1269,
-    "question": "How to get rid of dry skin on the lips?",
-    "answer_start": "01:17",
-    "answer_end": "01:58",
-    "answer_start_second": 77,
-    "answer_end_second": 118,
-    "video_length": 257,
-    "video_id": "6de38y0_R5U",
-    "video_url": "https://www.youtube.com/watch?v=6de38y0_R5U"
-  },
-  {
-    "sample_id": 1270,
-    "question": "How to exfoliate dehydrated lips using sugar scrub?",
-    "answer_start": "03:11",
-    "answer_end": "03:48",
-    "answer_start_second": 191,
-    "answer_end_second": 228,
-    "video_length": 257,
-    "video_id": "6de38y0_R5U",
-    "video_url": "https://www.youtube.com/watch?v=6de38y0_R5U"
-  },
-  {
     "sample_id": 1271,
     "question": "How to put polythene bag cling film on the injured person?",
     "answer_start": "00:48",
@@ -12879,61 +11944,6 @@
     "video_length": 235,
     "video_id": "S_TInkGhV4s",
     "video_url": "https://www.youtube.com/watch?v=S_TInkGhV4s"
-  },
-  {
-    "sample_id": 1274,
-    "question": "How to treat neck pain by extending the neck forwards and back?",
-    "answer_start": "00:46",
-    "answer_end": "01:22",
-    "answer_start_second": 46,
-    "answer_end_second": 82,
-    "video_length": 295,
-    "video_id": "2NOsE-VPpkE",
-    "video_url": "https://www.youtube.com/watch?v=2NOsE-VPpkE"
-  },
-  {
-    "sample_id": 1275,
-    "question": "How to treat neck pain by bending the neck sideways?",
-    "answer_start": "01:22",
-    "answer_end": "01:55",
-    "answer_start_second": 82,
-    "answer_end_second": 115,
-    "video_length": 295,
-    "video_id": "2NOsE-VPpkE",
-    "video_url": "https://www.youtube.com/watch?v=2NOsE-VPpkE"
-  },
-  {
-    "sample_id": 1276,
-    "question": "How to treat neck pain by rotating the neck?",
-    "answer_start": "01:56",
-    "answer_end": "02:27",
-    "answer_start_second": 116,
-    "answer_end_second": 147,
-    "video_length": 295,
-    "video_id": "2NOsE-VPpkE",
-    "video_url": "https://www.youtube.com/watch?v=2NOsE-VPpkE"
-  },
-  {
-    "sample_id": 1277,
-    "question": "How to treat neck pain by adding overpressure to neck stretches?",
-    "answer_start": "02:28",
-    "answer_end": "03:30",
-    "answer_start_second": 148,
-    "answer_end_second": 210,
-    "video_length": 295,
-    "video_id": "2NOsE-VPpkE",
-    "video_url": "https://www.youtube.com/watch?v=2NOsE-VPpkE"
-  },
-  {
-    "sample_id": 1278,
-    "question": "How to treat neck pain by performing levator scapulae stretches?",
-    "answer_start": "03:30",
-    "answer_end": "04:35",
-    "answer_start_second": 210,
-    "answer_end_second": 275,
-    "video_length": 295,
-    "video_id": "2NOsE-VPpkE",
-    "video_url": "https://www.youtube.com/watch?v=2NOsE-VPpkE"
   },
   {
     "sample_id": 1279,
@@ -13068,17 +12078,6 @@
     "video_url": "https://www.youtube.com/watch?v=a-vJGH6ex_8"
   },
   {
-    "sample_id": 1291,
-    "question": "How to prevent silicosis at the workplace?",
-    "answer_start": "01:28",
-    "answer_end": "01:57",
-    "answer_start_second": 88,
-    "answer_end_second": 117,
-    "video_length": 134,
-    "video_id": "1FZS8s3KdTA",
-    "video_url": "https://www.youtube.com/watch?v=1FZS8s3KdTA"
-  },
-  {
     "sample_id": 1292,
     "question": "How to pack a wound at home?",
     "answer_start": "01:24",
@@ -13209,28 +12208,6 @@
     "video_length": 201,
     "video_id": "jrGrk3SH0gk",
     "video_url": "https://www.youtube.com/watch?v=jrGrk3SH0gk"
-  },
-  {
-    "sample_id": 1308,
-    "question": "How to identify the signs of a stroke?",
-    "answer_start": "00:24",
-    "answer_end": "01:01",
-    "answer_start_second": 24,
-    "answer_end_second": 61,
-    "video_length": 151,
-    "video_id": "mkpbbWZvYmw",
-    "video_url": "https://www.youtube.com/watch?v=mkpbbWZvYmw"
-  },
-  {
-    "sample_id": 1309,
-    "question": "How to detect the other signs of a stroke?",
-    "answer_start": "01:19",
-    "answer_end": "01:52",
-    "answer_start_second": 79,
-    "answer_end_second": 112,
-    "video_length": 151,
-    "video_id": "mkpbbWZvYmw",
-    "video_url": "https://www.youtube.com/watch?v=mkpbbWZvYmw"
   },
   {
     "sample_id": 1310,
@@ -13374,61 +12351,6 @@
     "video_length": 258,
     "video_id": "E-G4rcey-mM",
     "video_url": "https://www.youtube.com/watch?v=E-G4rcey-mM"
-  },
-  {
-    "sample_id": 1324,
-    "question": "How to self-identify ischial bursitis versus high hamstring tendinopathy?",
-    "answer_start": "02:22",
-    "answer_end": "04:02",
-    "answer_start_second": 142,
-    "answer_end_second": 242,
-    "video_length": 675,
-    "video_id": "j0_-jkRbZEs",
-    "video_url": "https://www.youtube.com/watch?v=j0_-jkRbZEs"
-  },
-  {
-    "sample_id": 1325,
-    "question": "How to get pain relief from ischial bursitis while sitting?",
-    "answer_start": "04:28",
-    "answer_end": "05:06",
-    "answer_start_second": 268,
-    "answer_end_second": 306,
-    "video_length": 675,
-    "video_id": "j0_-jkRbZEs",
-    "video_url": "https://www.youtube.com/watch?v=j0_-jkRbZEs"
-  },
-  {
-    "sample_id": 1326,
-    "question": "How to self-massage to treat high hamstring tendinopathy?",
-    "answer_start": "06:32",
-    "answer_end": "08:30",
-    "answer_start_second": 392,
-    "answer_end_second": 510,
-    "video_length": 675,
-    "video_id": "j0_-jkRbZEs",
-    "video_url": "https://www.youtube.com/watch?v=j0_-jkRbZEs"
-  },
-  {
-    "sample_id": 1327,
-    "question": "How to treat high hamstring tendinopathy with a bridge exercise?",
-    "answer_start": "08:31",
-    "answer_end": "09:30",
-    "answer_start_second": 511,
-    "answer_end_second": 570,
-    "video_length": 675,
-    "video_id": "j0_-jkRbZEs",
-    "video_url": "https://www.youtube.com/watch?v=j0_-jkRbZEs"
-  },
-  {
-    "sample_id": 1328,
-    "question": "How to treat high hamstring tendinopathy with a large ball?",
-    "answer_start": "09:28",
-    "answer_end": "10:42",
-    "answer_start_second": 568,
-    "answer_end_second": 642,
-    "video_length": 675,
-    "video_id": "j0_-jkRbZEs",
-    "video_url": "https://www.youtube.com/watch?v=j0_-jkRbZEs"
   },
   {
     "sample_id": 1332,
@@ -14476,17 +13398,6 @@
     "video_url": "https://www.youtube.com/watch?v=SGkVwzMvQME"
   },
   {
-    "sample_id": 1450,
-    "question": "How to detect the ascites in the patient body?",
-    "answer_start": "01:05",
-    "answer_end": "01:19",
-    "answer_start_second": 65,
-    "answer_end_second": 79,
-    "video_length": 94,
-    "video_id": "1JKXf5osCHE",
-    "video_url": "https://www.youtube.com/watch?v=1JKXf5osCHE"
-  },
-  {
     "sample_id": 1451,
     "question": "How to use an AED on the unconscious adult?",
     "answer_start": "00:48",
@@ -14947,83 +13858,6 @@
     "video_length": 574,
     "video_id": "MHnitGvmNuE",
     "video_url": "https://www.youtube.com/watch?v=MHnitGvmNuE"
-  },
-  {
-    "sample_id": 1500,
-    "question": "How to identify common causes of numbness in the leg?",
-    "answer_start": "01:00",
-    "answer_end": "02:40",
-    "answer_start_second": 60,
-    "answer_end_second": 160,
-    "video_length": 633,
-    "video_id": "_-h1KxHfzho",
-    "video_url": "https://www.youtube.com/watch?v=_-h1KxHfzho"
-  },
-  {
-    "sample_id": 1501,
-    "question": "How to identify if you may have leg numbness from tarsal tunnel syndrome?",
-    "answer_start": "02:41",
-    "answer_end": "03:47",
-    "answer_start_second": 161,
-    "answer_end_second": 227,
-    "video_length": 633,
-    "video_id": "_-h1KxHfzho",
-    "video_url": "https://www.youtube.com/watch?v=_-h1KxHfzho"
-  },
-  {
-    "sample_id": 1502,
-    "question": "How to identify if you may have leg numbness from peripheral neuropathy?",
-    "answer_start": "03:47",
-    "answer_end": "05:00",
-    "answer_start_second": 227,
-    "answer_end_second": 300,
-    "video_length": 633,
-    "video_id": "_-h1KxHfzho",
-    "video_url": "https://www.youtube.com/watch?v=_-h1KxHfzho"
-  },
-  {
-    "sample_id": 1503,
-    "question": "How to identify if you may have leg numbness from peripheral artery disease?",
-    "answer_start": "05:13",
-    "answer_end": "06:29",
-    "answer_start_second": 313,
-    "answer_end_second": 389,
-    "video_length": 633,
-    "video_id": "_-h1KxHfzho",
-    "video_url": "https://www.youtube.com/watch?v=_-h1KxHfzho"
-  },
-  {
-    "sample_id": 1504,
-    "question": "How to identify if you may have leg numbness from a herniated disc?",
-    "answer_start": "06:30",
-    "answer_end": "07:42",
-    "answer_start_second": 390,
-    "answer_end_second": 462,
-    "video_length": 633,
-    "video_id": "_-h1KxHfzho",
-    "video_url": "https://www.youtube.com/watch?v=_-h1KxHfzho"
-  },
-  {
-    "sample_id": 1505,
-    "question": "How to identify if you may have leg numbness from spinal stenosis and spondylolisthesis?",
-    "answer_start": "07:42",
-    "answer_end": "08:50",
-    "answer_start_second": 462,
-    "answer_end_second": 530,
-    "video_length": 633,
-    "video_id": "_-h1KxHfzho",
-    "video_url": "https://www.youtube.com/watch?v=_-h1KxHfzho"
-  },
-  {
-    "sample_id": 1506,
-    "question": "How to identify if you may have leg numbness from false sciatica?",
-    "answer_start": "09:15",
-    "answer_end": "10:04",
-    "answer_start_second": 555,
-    "answer_end_second": 604,
-    "video_length": 633,
-    "video_id": "_-h1KxHfzho",
-    "video_url": "https://www.youtube.com/watch?v=_-h1KxHfzho"
   },
   {
     "sample_id": 1507,
@@ -18040,50 +16874,6 @@
     "video_url": "https://www.youtube.com/watch?v=C63rt-fleGY"
   },
   {
-    "sample_id": 1786,
-    "question": "How to massage the chest to fix a pinched nerve in the shoulder blades?",
-    "answer_start": "00:25",
-    "answer_end": "00:48",
-    "answer_start_second": 25,
-    "answer_end_second": 48,
-    "video_length": 215,
-    "video_id": "9kIPPMbuKfA",
-    "video_url": "https://www.youtube.com/watch?v=9kIPPMbuKfA"
-  },
-  {
-    "sample_id": 1787,
-    "question": "How to shake the arms to fix a pinched nerve in the shoulder blades?",
-    "answer_start": "00:48",
-    "answer_end": "01:33",
-    "answer_start_second": 48,
-    "answer_end_second": 93,
-    "video_length": 215,
-    "video_id": "9kIPPMbuKfA",
-    "video_url": "https://www.youtube.com/watch?v=9kIPPMbuKfA"
-  },
-  {
-    "sample_id": 1788,
-    "question": "How to rotate and extend the arms to fix a pinched nerve in the shoulder blades?",
-    "answer_start": "01:33",
-    "answer_end": "02:31",
-    "answer_start_second": 93,
-    "answer_end_second": 151,
-    "video_length": 215,
-    "video_id": "9kIPPMbuKfA",
-    "video_url": "https://www.youtube.com/watch?v=9kIPPMbuKfA"
-  },
-  {
-    "sample_id": 1789,
-    "question": "How to shake and stretch the arms to fix a pinched nerve in the shoulder blades?",
-    "answer_start": "02:32",
-    "answer_end": "03:19",
-    "answer_start_second": 152,
-    "answer_end_second": 199,
-    "video_length": 215,
-    "video_id": "9kIPPMbuKfA",
-    "video_url": "https://www.youtube.com/watch?v=9kIPPMbuKfA"
-  },
-  {
     "sample_id": 1790,
     "question": "How can I do kegel exercise to get relief from tailbone pain?",
     "answer_start": "02:06",
@@ -18148,17 +16938,6 @@
     "video_length": 414,
     "video_id": "NRf06TTRzEA",
     "video_url": "https://www.youtube.com/watch?v=NRf06TTRzEA"
-  },
-  {
-    "sample_id": 1796,
-    "question": "How to do exercise to stop the elbow pain?",
-    "answer_start": "05:02",
-    "answer_end": "06:05",
-    "answer_start_second": 302,
-    "answer_end_second": 365,
-    "video_length": 552,
-    "video_id": "eIdYNJRa2Hk",
-    "video_url": "https://www.youtube.com/watch?v=eIdYNJRa2Hk"
   },
   {
     "sample_id": 1797,
@@ -18269,17 +17048,6 @@
     "video_length": 724,
     "video_id": "VhLEmrt1tjA",
     "video_url": "https://www.youtube.com/watch?v=VhLEmrt1tjA"
-  },
-  {
-    "sample_id": 1807,
-    "question": "How should i do cervical extension to relieve pain caused by a pinched nerve?",
-    "answer_start": "03:50",
-    "answer_end": "05:28",
-    "answer_start_second": 230,
-    "answer_end_second": 328,
-    "video_length": 541,
-    "video_id": "fwZTDx9NMgk",
-    "video_url": "https://www.youtube.com/watch?v=fwZTDx9NMgk"
   },
   {
     "sample_id": 1808,
@@ -18612,72 +17380,6 @@
     "video_url": "https://www.youtube.com/watch?v=lJB0Un0hBQE"
   },
   {
-    "sample_id": 1860,
-    "question": "How to do exercise for hip with injured foot or ankles?",
-    "answer_start": "03:42",
-    "answer_end": "04:18",
-    "answer_start_second": 222,
-    "answer_end_second": 258,
-    "video_length": 597,
-    "video_id": "KpQMdt3n3qE",
-    "video_url": "https://www.youtube.com/watch?v=KpQMdt3n3qE"
-  },
-  {
-    "sample_id": 1861,
-    "question": "How to do adduction exercise for hip with injured foot or ankles?",
-    "answer_start": "04:30",
-    "answer_end": "05:10",
-    "answer_start_second": 270,
-    "answer_end_second": 310,
-    "video_length": 597,
-    "video_id": "KpQMdt3n3qE",
-    "video_url": "https://www.youtube.com/watch?v=KpQMdt3n3qE"
-  },
-  {
-    "sample_id": 1862,
-    "question": "How to do an extension exercise for a hip with an injured foot or ankles?",
-    "answer_start": "05:13",
-    "answer_end": "05:58",
-    "answer_start_second": 313,
-    "answer_end_second": 358,
-    "video_length": 597,
-    "video_id": "KpQMdt3n3qE",
-    "video_url": "https://www.youtube.com/watch?v=KpQMdt3n3qE"
-  },
-  {
-    "sample_id": 1863,
-    "question": "How to do hip adductors with an injured foot or ankles?",
-    "answer_start": "06:16",
-    "answer_end": "06:38",
-    "answer_start_second": 376,
-    "answer_end_second": 398,
-    "video_length": 597,
-    "video_id": "KpQMdt3n3qE",
-    "video_url": "https://www.youtube.com/watch?v=KpQMdt3n3qE"
-  },
-  {
-    "sample_id": 1864,
-    "question": "How to do quadriceps exercise with an injured foot or ankles?",
-    "answer_start": "07:05",
-    "answer_end": "08:07",
-    "answer_start_second": 425,
-    "answer_end_second": 487,
-    "video_length": 597,
-    "video_id": "KpQMdt3n3qE",
-    "video_url": "https://www.youtube.com/watch?v=KpQMdt3n3qE"
-  },
-  {
-    "sample_id": 1865,
-    "question": "How to fix Biceps Tendonitis at home?",
-    "answer_start": "04:30",
-    "answer_end": "06:56",
-    "answer_start_second": 270,
-    "answer_end_second": 416,
-    "video_length": 542,
-    "video_id": "HRkqiLUfgfQ",
-    "video_url": "https://www.youtube.com/watch?v=HRkqiLUfgfQ"
-  },
-  {
     "sample_id": 1867,
     "question": "How can I do exercise to self-crack the upper and middle back with the help of a foam roller?",
     "answer_start": "01:02",
@@ -18808,17 +17510,6 @@
     "video_length": 421,
     "video_id": "Kf23mreNxoQ",
     "video_url": "https://www.youtube.com/watch?v=Kf23mreNxoQ"
-  },
-  {
-    "sample_id": 1879,
-    "question": "How to effectively brush your teeth to minimize gum recession at home?",
-    "answer_start": "05:08",
-    "answer_end": "06:06",
-    "answer_start_second": 308,
-    "answer_end_second": 366,
-    "video_length": 504,
-    "video_id": "OAi5FsNP7eQ",
-    "video_url": "https://www.youtube.com/watch?v=OAi5FsNP7eQ"
   },
   {
     "sample_id": 1880,
@@ -19129,39 +17820,6 @@
     "video_url": "https://www.youtube.com/watch?v=zTMiHTl4Axc"
   },
   {
-    "sample_id": 1909,
-    "question": "How to put a baby in a recovery position if the baby is not responding?",
-    "answer_start": "00:26",
-    "answer_end": "00:40",
-    "answer_start_second": 26,
-    "answer_end_second": 40,
-    "video_length": 56,
-    "video_id": "NupCeGFUuoo",
-    "video_url": "https://www.youtube.com/watch?v=NupCeGFUuoo"
-  },
-  {
-    "sample_id": 1910,
-    "question": "What is the basic first aid for minor knife wounds?",
-    "answer_start": "00:47",
-    "answer_end": "01:21",
-    "answer_start_second": 47,
-    "answer_end_second": 81,
-    "video_length": 123,
-    "video_id": "0NwEgbVKDhk",
-    "video_url": "https://www.youtube.com/watch?v=0NwEgbVKDhk"
-  },
-  {
-    "sample_id": 1911,
-    "question": "How do i know if the knife wound is serious?",
-    "answer_start": "01:25",
-    "answer_end": "01:45",
-    "answer_start_second": 85,
-    "answer_end_second": 105,
-    "video_length": 123,
-    "video_id": "0NwEgbVKDhk",
-    "video_url": "https://www.youtube.com/watch?v=0NwEgbVKDhk"
-  },
-  {
     "sample_id": 1912,
     "question": "How to perform hip flexion to stretch the hip muscles and treat hip arthritis?",
     "answer_start": "03:52",
@@ -19248,28 +17906,6 @@
     "video_length": 630,
     "video_id": "lZrZGmMsAMw",
     "video_url": "https://www.youtube.com/watch?v=lZrZGmMsAMw"
-  },
-  {
-    "sample_id": 1920,
-    "question": "How to identify the signs of a stroke?",
-    "answer_start": "00:00",
-    "answer_end": "00:30",
-    "answer_start_second": 0,
-    "answer_end_second": 30,
-    "video_length": 44,
-    "video_id": "aNct84-0WZk",
-    "video_url": "https://www.youtube.com/watch?v=aNct84-0WZk"
-  },
-  {
-    "sample_id": 1921,
-    "question": "How to help someone with a stroke?",
-    "answer_start": "00:30",
-    "answer_end": "00:39",
-    "answer_start_second": 30,
-    "answer_end_second": 39,
-    "video_length": 44,
-    "video_id": "aNct84-0WZk",
-    "video_url": "https://www.youtube.com/watch?v=aNct84-0WZk"
   },
   {
     "sample_id": 1922,
@@ -20361,39 +18997,6 @@
     "video_url": "https://www.youtube.com/watch?v=Za2-OVjaTPc"
   },
   {
-    "sample_id": 2023,
-    "question": "How to test if you may have spondylolysis?",
-    "answer_start": "05:20",
-    "answer_end": "05:59",
-    "answer_start_second": 320,
-    "answer_end_second": 359,
-    "video_length": 682,
-    "video_id": "7TjXTMkQewE",
-    "video_url": "https://www.youtube.com/watch?v=7TjXTMkQewE"
-  },
-  {
-    "sample_id": 2024,
-    "question": "How to perform hip flexion to treat spondylolysis and spondylolisthesis?",
-    "answer_start": "08:05",
-    "answer_end": "08:40",
-    "answer_start_second": 485,
-    "answer_end_second": 520,
-    "video_length": 682,
-    "video_id": "7TjXTMkQewE",
-    "video_url": "https://www.youtube.com/watch?v=7TjXTMkQewE"
-  },
-  {
-    "sample_id": 2025,
-    "question": "How to strengthen the ab muscles to treat spondylolysis and spondylolisthesis?",
-    "answer_start": "08:40",
-    "answer_end": "11:01",
-    "answer_start_second": 520,
-    "answer_end_second": 661,
-    "video_length": 682,
-    "video_id": "7TjXTMkQewE",
-    "video_url": "https://www.youtube.com/watch?v=7TjXTMkQewE"
-  },
-  {
     "sample_id": 2026,
     "question": "How to create saline soaks to relieve pain from sore nipples?",
     "answer_start": "01:28",
@@ -21296,83 +19899,6 @@
     "video_url": "https://www.youtube.com/watch?v=5DTwZztVnoY"
   },
   {
-    "sample_id": 2128,
-    "question": "How to reduce stress by relaxing your feet muscles? ",
-    "answer_start": "01:20",
-    "answer_end": "01:51",
-    "answer_start_second": 80,
-    "answer_end_second": 111,
-    "video_length": 354,
-    "video_id": "ClqPtWzozXs",
-    "video_url": "https://www.youtube.com/watch?v=ClqPtWzozXs"
-  },
-  {
-    "sample_id": 2129,
-    "question": "How to reduce stress by relaxing your calf muscles? ",
-    "answer_start": "01:59",
-    "answer_end": "02:20",
-    "answer_start_second": 119,
-    "answer_end_second": 140,
-    "video_length": 354,
-    "video_id": "ClqPtWzozXs",
-    "video_url": "https://www.youtube.com/watch?v=ClqPtWzozXs"
-  },
-  {
-    "sample_id": 2130,
-    "question": "How to reduce stress by relaxing your thigh muscles? ",
-    "answer_start": "02:21",
-    "answer_end": "02:45",
-    "answer_start_second": 141,
-    "answer_end_second": 165,
-    "video_length": 354,
-    "video_id": "ClqPtWzozXs",
-    "video_url": "https://www.youtube.com/watch?v=ClqPtWzozXs"
-  },
-  {
-    "sample_id": 2131,
-    "question": "How to reduce stress by relaxing your buttocks muscles? ",
-    "answer_start": "03:57",
-    "answer_end": "04:16",
-    "answer_start_second": 237,
-    "answer_end_second": 256,
-    "video_length": 354,
-    "video_id": "ClqPtWzozXs",
-    "video_url": "https://www.youtube.com/watch?v=ClqPtWzozXs"
-  },
-  {
-    "sample_id": 2132,
-    "question": "How to reduce stress by relaxing your hands' muscles? ",
-    "answer_start": "04:17",
-    "answer_end": "04:35",
-    "answer_start_second": 257,
-    "answer_end_second": 275,
-    "video_length": 354,
-    "video_id": "ClqPtWzozXs",
-    "video_url": "https://www.youtube.com/watch?v=ClqPtWzozXs"
-  },
-  {
-    "sample_id": 2133,
-    "question": "How to reduce stress by relaxing your hands' muscles? ",
-    "answer_start": "04:36",
-    "answer_end": "04:56",
-    "answer_start_second": 276,
-    "answer_end_second": 296,
-    "video_length": 354,
-    "video_id": "ClqPtWzozXs",
-    "video_url": "https://www.youtube.com/watch?v=ClqPtWzozXs"
-  },
-  {
-    "sample_id": 2134,
-    "question": "How to reduce stress by relaxing your face and mouth muscles? ",
-    "answer_start": "04:57",
-    "answer_end": "05:20",
-    "answer_start_second": 297,
-    "answer_end_second": 320,
-    "video_length": 354,
-    "video_id": "ClqPtWzozXs",
-    "video_url": "https://www.youtube.com/watch?v=ClqPtWzozXs"
-  },
-  {
     "sample_id": 2135,
     "question": "How to treat an eye injury?",
     "answer_start": "00:49",
@@ -21756,61 +20282,6 @@
     "video_length": 58,
     "video_id": "d-ZV_zxc5Ek",
     "video_url": "https://www.youtube.com/watch?v=d-ZV_zxc5Ek"
-  },
-  {
-    "sample_id": 2170,
-    "question": "How can one make their thumb flexible with exercise?",
-    "answer_start": "03:04",
-    "answer_end": "03:37",
-    "answer_start_second": 184,
-    "answer_end_second": 217,
-    "video_length": 450,
-    "video_id": "MKqbN_pnz8c",
-    "video_url": "https://www.youtube.com/watch?v=MKqbN_pnz8c"
-  },
-  {
-    "sample_id": 2171,
-    "question": "How can one make their hand fingers flexible with exercise?",
-    "answer_start": "03:38",
-    "answer_end": "04:05",
-    "answer_start_second": 218,
-    "answer_end_second": 245,
-    "video_length": 450,
-    "video_id": "MKqbN_pnz8c",
-    "video_url": "https://www.youtube.com/watch?v=MKqbN_pnz8c"
-  },
-  {
-    "sample_id": 2172,
-    "question": "How can one strengthen their hand fingers with exercise?",
-    "answer_start": "04:06",
-    "answer_end": "04:46",
-    "answer_start_second": 246,
-    "answer_end_second": 286,
-    "video_length": 450,
-    "video_id": "MKqbN_pnz8c",
-    "video_url": "https://www.youtube.com/watch?v=MKqbN_pnz8c"
-  },
-  {
-    "sample_id": 2173,
-    "question": "How can one strengthen their thumbs with exercise?",
-    "answer_start": "04:48",
-    "answer_end": "05:55",
-    "answer_start_second": 288,
-    "answer_end_second": 355,
-    "video_length": 450,
-    "video_id": "MKqbN_pnz8c",
-    "video_url": "https://www.youtube.com/watch?v=MKqbN_pnz8c"
-  },
-  {
-    "sample_id": 2174,
-    "question": "How can one stretch their hand muscle with exercise?",
-    "answer_start": "06:01",
-    "answer_end": "06:30",
-    "answer_start_second": 361,
-    "answer_end_second": 390,
-    "video_length": 450,
-    "video_id": "MKqbN_pnz8c",
-    "video_url": "https://www.youtube.com/watch?v=MKqbN_pnz8c"
   },
   {
     "sample_id": 2175,
@@ -22407,50 +20878,6 @@
     "video_url": "https://www.youtube.com/watch?v=Kd9tltpAz7Q"
   },
   {
-    "sample_id": 2240,
-    "question": "How to extend and flex the wrist for wrist pain relief?",
-    "answer_start": "05:05",
-    "answer_end": "06:12",
-    "answer_start_second": 305,
-    "answer_end_second": 372,
-    "video_length": 615,
-    "video_id": "cOcRxCzVzYA",
-    "video_url": "https://www.youtube.com/watch?v=cOcRxCzVzYA"
-  },
-  {
-    "sample_id": 2241,
-    "question": "How to perform wrist circles for wrist pain relief?",
-    "answer_start": "06:12",
-    "answer_end": "06:48",
-    "answer_start_second": 372,
-    "answer_end_second": 408,
-    "video_length": 615,
-    "video_id": "cOcRxCzVzYA",
-    "video_url": "https://www.youtube.com/watch?v=cOcRxCzVzYA"
-  },
-  {
-    "sample_id": 2242,
-    "question": "How to perform wrist decompressions and tractions for wrist pain relief?",
-    "answer_start": "06:48",
-    "answer_end": "08:25",
-    "answer_start_second": 408,
-    "answer_end_second": 505,
-    "video_length": 615,
-    "video_id": "cOcRxCzVzYA",
-    "video_url": "https://www.youtube.com/watch?v=cOcRxCzVzYA"
-  },
-  {
-    "sample_id": 2243,
-    "question": "How to perform the Mulligan wrist technique for wrist pain relief?",
-    "answer_start": "08:26",
-    "answer_end": "09:18",
-    "answer_start_second": 506,
-    "answer_end_second": 558,
-    "video_length": 615,
-    "video_id": "cOcRxCzVzYA",
-    "video_url": "https://www.youtube.com/watch?v=cOcRxCzVzYA"
-  },
-  {
     "sample_id": 2244,
     "question": "How to measure stoma using a measuring guide?",
     "answer_start": "01:52",
@@ -22592,39 +21019,6 @@
     "video_length": 270,
     "video_id": "TlXRi331uQI",
     "video_url": "https://www.youtube.com/watch?v=TlXRi331uQI"
-  },
-  {
-    "sample_id": 2257,
-    "question": "How to do resting position exercise to heal TMJ pain?",
-    "answer_start": "01:48",
-    "answer_end": "02:08",
-    "answer_start_second": 108,
-    "answer_end_second": 128,
-    "video_length": 364,
-    "video_id": "QwhD5UTUW60",
-    "video_url": "https://www.youtube.com/watch?v=QwhD5UTUW60"
-  },
-  {
-    "sample_id": 2258,
-    "question": "How to stabilize the muscle to heal TMJ pain?",
-    "answer_start": "02:19",
-    "answer_end": "03:23",
-    "answer_start_second": 139,
-    "answer_end_second": 203,
-    "video_length": 364,
-    "video_id": "QwhD5UTUW60",
-    "video_url": "https://www.youtube.com/watch?v=QwhD5UTUW60"
-  },
-  {
-    "sample_id": 2259,
-    "question": "How to do posture Blee drop position?",
-    "answer_start": "04:01",
-    "answer_end": "05:03",
-    "answer_start_second": 241,
-    "answer_end_second": 303,
-    "video_length": 364,
-    "video_id": "QwhD5UTUW60",
-    "video_url": "https://www.youtube.com/watch?v=QwhD5UTUW60"
   },
   {
     "sample_id": 2260,
@@ -23331,17 +21725,6 @@
     "video_url": "https://www.youtube.com/watch?v=wPglPlhpR-g"
   },
   {
-    "sample_id": 2327,
-    "question": "How to make a peanut butter shake to maintain weight during cancer treatment?",
-    "answer_start": "03:13",
-    "answer_end": "03:43",
-    "answer_start_second": 193,
-    "answer_end_second": 223,
-    "video_length": 298,
-    "video_id": "BgaE_SA78-w",
-    "video_url": "https://www.youtube.com/watch?v=BgaE_SA78-w"
-  },
-  {
     "sample_id": 2328,
     "question": "How do I put on a walking boot with an ankle brace?",
     "answer_start": "08:18",
@@ -23494,28 +21877,6 @@
     "video_length": 287,
     "video_id": "Rx_ieAFxoQI",
     "video_url": "https://www.youtube.com/watch?v=Rx_ieAFxoQI"
-  },
-  {
-    "sample_id": 2342,
-    "question": "How to identify signs of melanoma?",
-    "answer_start": "03:12",
-    "answer_end": "04:47",
-    "answer_start_second": 192,
-    "answer_end_second": 287,
-    "video_length": 491,
-    "video_id": "Y3hWv26Bs9E",
-    "video_url": "https://www.youtube.com/watch?v=Y3hWv26Bs9E"
-  },
-  {
-    "sample_id": 2343,
-    "question": "How to prevent skin cancer?",
-    "answer_start": "05:23",
-    "answer_end": "06:04",
-    "answer_start_second": 323,
-    "answer_end_second": 364,
-    "video_length": 491,
-    "video_id": "Y3hWv26Bs9E",
-    "video_url": "https://www.youtube.com/watch?v=Y3hWv26Bs9E"
   },
   {
     "sample_id": 2344,
@@ -23692,28 +22053,6 @@
     "video_length": 452,
     "video_id": "RyGx--K75wM",
     "video_url": "https://www.youtube.com/watch?v=RyGx--K75wM"
-  },
-  {
-    "sample_id": 2360,
-    "question": "How to get rid of leg and foot swelling?",
-    "answer_start": "02:40",
-    "answer_end": "03:28",
-    "answer_start_second": 160,
-    "answer_end_second": 208,
-    "video_length": 803,
-    "video_id": "xPlnDsfaGaM",
-    "video_url": "https://www.youtube.com/watch?v=xPlnDsfaGaM"
-  },
-  {
-    "sample_id": 2361,
-    "question": "How to use a  tubigrid on leg?",
-    "answer_start": "07:06",
-    "answer_end": "07:41",
-    "answer_start_second": 426,
-    "answer_end_second": 461,
-    "video_length": 803,
-    "video_id": "xPlnDsfaGaM",
-    "video_url": "https://www.youtube.com/watch?v=xPlnDsfaGaM"
   },
   {
     "sample_id": 2364,
@@ -24838,39 +23177,6 @@
     "video_url": "https://www.youtube.com/watch?v=p0g5CHL3IUs"
   },
   {
-    "sample_id": 2470,
-    "question": "How to do external rotator stretch with a broomstick for flexibility and mobility in the shoulder?",
-    "answer_start": "01:37",
-    "answer_end": "02:21",
-    "answer_start_second": 97,
-    "answer_end_second": 141,
-    "video_length": 226,
-    "video_id": "UJ7WK2fcatg",
-    "video_url": "https://www.youtube.com/watch?v=UJ7WK2fcatg"
-  },
-  {
-    "sample_id": 2471,
-    "question": "How to do external rotator stretch with a towel for flexibility and mobility in the shoulder?",
-    "answer_start": "02:25",
-    "answer_end": "02:40",
-    "answer_start_second": 145,
-    "answer_end_second": 160,
-    "video_length": 226,
-    "video_id": "UJ7WK2fcatg",
-    "video_url": "https://www.youtube.com/watch?v=UJ7WK2fcatg"
-  },
-  {
-    "sample_id": 2472,
-    "question": "How to do internal rotator stretch with a pole for flexibility and mobility in the shoulder?",
-    "answer_start": "02:41",
-    "answer_end": "03:09",
-    "answer_start_second": 161,
-    "answer_end_second": 189,
-    "video_length": 226,
-    "video_id": "UJ7WK2fcatg",
-    "video_url": "https://www.youtube.com/watch?v=UJ7WK2fcatg"
-  },
-  {
     "sample_id": 2475,
     "question": "How to do buddy taping finger injuries? ",
     "answer_start": "01:17",
@@ -25056,28 +23362,6 @@
     "video_length": 311,
     "video_id": "WDsdNz2xzZ8",
     "video_url": "https://www.youtube.com/watch?v=WDsdNz2xzZ8"
-  },
-  {
-    "sample_id": 2517,
-    "question": "How can one fix their tennis elbow pain with massage?",
-    "answer_start": "03:33",
-    "answer_end": "04:26",
-    "answer_start_second": 213,
-    "answer_end_second": 266,
-    "video_length": 488,
-    "video_id": "s4xCKEr0LkA",
-    "video_url": "https://www.youtube.com/watch?v=s4xCKEr0LkA"
-  },
-  {
-    "sample_id": 2518,
-    "question": "How can one fix their golfer elbow pain with massage?",
-    "answer_start": "04:47",
-    "answer_end": "05:55",
-    "answer_start_second": 287,
-    "answer_end_second": 355,
-    "video_length": 488,
-    "video_id": "s4xCKEr0LkA",
-    "video_url": "https://www.youtube.com/watch?v=s4xCKEr0LkA"
   },
   {
     "sample_id": 2519,
@@ -26266,17 +24550,6 @@
     "video_length": 90,
     "video_id": "XNDoQm8wxHg",
     "video_url": "https://www.youtube.com/watch?v=XNDoQm8wxHg"
-  },
-  {
-    "sample_id": 2650,
-    "question": "How to detect signs of melanoma?",
-    "answer_start": "01:24",
-    "answer_end": "01:54",
-    "answer_start_second": 84,
-    "answer_end_second": 114,
-    "video_length": 485,
-    "video_id": "CoAMV9VS43c",
-    "video_url": "https://www.youtube.com/watch?v=CoAMV9VS43c"
   },
   {
     "sample_id": 2651,

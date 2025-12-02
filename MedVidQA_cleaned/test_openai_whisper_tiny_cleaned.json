@@ -110,17 +110,6 @@
     "video_url": "https://www.youtube.com/watch?v=g-gNQPyxU4c"
   },
   {
-    "sample_id": 2724,
-    "question": "How to use an incentive spirometer to maintain respiratory fitness?",
-    "answer_start": "00:52",
-    "answer_end": "01:17",
-    "answer_start_second": 52,
-    "answer_end_second": 77,
-    "video_length": 89,
-    "video_id": "VHN5zPaw96w",
-    "video_url": "https://www.youtube.com/watch?v=VHN5zPaw96w"
-  },
-  {
     "sample_id": 2725,
     "question": "How to fix chronic neck tension while lying down on the ground?",
     "answer_start": "01:53",
@@ -196,28 +185,6 @@
     "video_length": 582,
     "video_id": "6kQEDRQdJZ8",
     "video_url": "https://www.youtube.com/watch?v=6kQEDRQdJZ8"
-  },
-  {
-    "sample_id": 2732,
-    "question": "How do i apply pressure dressing on my leg?",
-    "answer_start": "03:26",
-    "answer_end": "03:54",
-    "answer_start_second": 206,
-    "answer_end_second": 234,
-    "video_length": 376,
-    "video_id": "0dr5yuoBOF4",
-    "video_url": "https://www.youtube.com/watch?v=0dr5yuoBOF4"
-  },
-  {
-    "sample_id": 2733,
-    "question": "How do i apply pressure dressing with a bracket on my leg?",
-    "answer_start": "03:57",
-    "answer_end": "04:30",
-    "answer_start_second": 237,
-    "answer_end_second": 270,
-    "video_length": 376,
-    "video_id": "0dr5yuoBOF4",
-    "video_url": "https://www.youtube.com/watch?v=0dr5yuoBOF4"
   },
   {
     "sample_id": 2734,

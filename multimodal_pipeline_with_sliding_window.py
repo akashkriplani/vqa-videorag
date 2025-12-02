@@ -86,9 +86,17 @@ else:
 
 def extract_audio_ffmpeg(video_path, audio_path):
     cmd = [
-        'ffmpeg', '-y', '-i', video_path, '-vn', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', audio_path
+        'ffmpeg', '-y', '-hide_banner', '-loglevel', 'error',
+        '-i', video_path, '-vn', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', audio_path
     ]
-    subprocess.run(cmd, check=True)
+    try:
+        result = subprocess.run(cmd, check=True, stderr=subprocess.PIPE, text=True)
+        print(f"✓ Audio extracted: {os.path.basename(video_path)} -> {os.path.basename(audio_path)}")
+    except subprocess.CalledProcessError as e:
+        print(f"✗ Audio extraction failed for {video_path}")
+        if e.stderr:
+            print(f"  Error: {e.stderr}")
+        raise
 
 def transcribe_with_asr(video_path, asr_model_id="openai/whisper-tiny"):
     if torch.cuda.is_available():
@@ -121,7 +129,7 @@ def load_ner_and_embed_models():
 
 def extract_entities_and_embed_optimized(transcript_chunks, nlp, bert_tokenizer, bert_model, video_id,
                                         window_size=256, stride=192, max_length=512,
-                                        deduplication_mode='coverage', min_coverage_contribution=0.15):
+                                        deduplication_mode='coverage', min_coverage_contribution=0.05):
     """
     Optimized sliding window approach with coverage-based deduplication.
 
@@ -136,7 +144,7 @@ def extract_entities_and_embed_optimized(transcript_chunks, nlp, bert_tokenizer,
         stride: 192 tokens (25% overlap for coverage)
         max_length: Maximum BERT sequence length
         deduplication_mode: 'coverage' (recommended), 'similarity', 'aggressive', or 'none'
-        min_coverage_contribution: Minimum % of new tokens required to keep window (default: 0.15)
+        min_coverage_contribution: Minimum % of new tokens required to keep window (default: 0.05)
     """
     results = []
     seen_hashes = {}  # Track content hashes with token ranges
@@ -553,7 +561,7 @@ def process_video_batch(batch_fnames, video_dir, text_feat_dir, visual_feat_dir,
                 transcript_chunks, nlp, bert_tokenizer, bert_model, video_id=video_id,
                 window_size=256, stride=192,
                 deduplication_mode='coverage',
-                min_coverage_contribution=0.15
+                min_coverage_contribution=0.05
             )
             print(f"Text embeddings generated: {len(text_results)} segments")
 
@@ -630,7 +638,7 @@ def hierarchical_search_legacy(query_emb, text_db, json_data, top_k=5, enable_fi
     )
 
 def demo_pipeline(video_path, text_feat_dir, visual_feat_dir, faiss_text_path, faiss_visual_path,
-                 window_size=256, stride=192, min_coverage_contribution=0.15,
+                 window_size=256, stride=192, min_coverage_contribution=0.05,
                  deduplication_mode='coverage', frames_per_segment=2,
                  sampling_strategy='adaptive', quality_filter=False, aggregation_method='mean'):
     """
@@ -639,7 +647,7 @@ def demo_pipeline(video_path, text_feat_dir, visual_feat_dir, faiss_text_path, f
     Text embedding hyperparameters:
         window_size: Token window size (default: 256)
         stride: Stride between windows (default: 192)
-        min_coverage_contribution: Minimum new token coverage to keep window (default: 0.15)
+        min_coverage_contribution: Minimum new token coverage to keep window (default: 0.05)
         deduplication_mode: 'coverage', 'similarity', 'aggressive', or 'none' (default: 'coverage')
 
     Visual embedding hyperparameters:
@@ -907,7 +915,7 @@ def demo_pipeline(video_path, text_feat_dir, visual_feat_dir, faiss_text_path, f
             print(f"  {i}. {meta.get('segment_id', 'N/A')} - Score: {result.get('distance', 'N/A'):.4f}")
 
 def process_video(fname, video_dir, text_feat_dir, visual_feat_dir,
-                 window_size=256, stride=192, min_coverage_contribution=0.15,
+                 window_size=256, stride=192, min_coverage_contribution=0.05,
                  deduplication_mode='coverage', frames_per_segment=2,
                  sampling_strategy='adaptive', quality_filter=False, aggregation_method='mean'):
     """
@@ -1014,7 +1022,7 @@ def process_video(fname, video_dir, text_feat_dir, visual_feat_dir,
 
 
 def process_split(split, video_dir, text_feat_dir, visual_feat_dir, faiss_text_path, faiss_visual_path,
-                 window_size=256, stride=192, min_coverage_contribution=0.15,
+                 window_size=256, stride=192, min_coverage_contribution=0.05,
                  deduplication_mode='coverage', frames_per_segment=2,
                  sampling_strategy='adaptive', quality_filter=False, aggregation_method='mean'):
     """
