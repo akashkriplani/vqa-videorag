@@ -32,6 +32,7 @@ from video_processing.pipeline import VideoProcessorConfig
 from embedding_storage import FaissDB, save_video_features, save_faiss_indices_from_lists
 from data_preparation import filter_json_by_embeddings
 from hierarchical_search_utils import hierarchical_search
+from transformers import AutoTokenizer, AutoModel
 
 # Import aggregation and output formatting from query_faiss for consistency
 try:
@@ -76,7 +77,7 @@ else:
     hf_login(HF_TOKEN)
 
 def process_video_batch(batch_fnames, video_dir, text_feat_dir, visual_feat_dir, asr_model_id,
-                       use_new_processor=True, **processor_kwargs):
+                       **processor_kwargs):
     """
     Process a batch of videos using either the new VideoProcessor or legacy implementation.
 
@@ -86,7 +87,6 @@ def process_video_batch(batch_fnames, video_dir, text_feat_dir, visual_feat_dir,
         text_feat_dir: Directory to save text features
         visual_feat_dir: Directory to save visual features
         asr_model_id: ASR model identifier
-        use_new_processor: If True, use refactored VideoProcessor (recommended)
         **processor_kwargs: Additional configuration parameters for VideoProcessor
 
     Returns:
@@ -94,24 +94,20 @@ def process_video_batch(batch_fnames, video_dir, text_feat_dir, visual_feat_dir,
     """
     batch_results = {}
 
-    # NEW: Initialize VideoProcessor once for the batch if using new implementation
-    if use_new_processor:
-        from video_processing.pipeline import VideoProcessorConfig
+    config = VideoProcessorConfig(
+        asr_model_id=asr_model_id,
+        window_size=processor_kwargs.get('window_size', 256),
+        stride=processor_kwargs.get('stride', 192),
+        min_coverage_contribution=processor_kwargs.get('min_coverage_contribution', 0.05),
+        deduplication_mode=processor_kwargs.get('deduplication_mode', 'coverage'),
+        frames_per_segment=processor_kwargs.get('frames_per_segment', 2),
+        sampling_strategy=processor_kwargs.get('sampling_strategy', 'adaptive'),
+        quality_filter=processor_kwargs.get('quality_filter', False),
+        aggregation_method=processor_kwargs.get('aggregation_method', 'mean'),
+        visual_similarity_threshold=processor_kwargs.get('visual_similarity_threshold', 0.98)
+    )
 
-        config = VideoProcessorConfig(
-            asr_model_id=asr_model_id,
-            window_size=processor_kwargs.get('window_size', 256),
-            stride=processor_kwargs.get('stride', 192),
-            min_coverage_contribution=processor_kwargs.get('min_coverage_contribution', 0.05),
-            deduplication_mode=processor_kwargs.get('deduplication_mode', 'coverage'),
-            frames_per_segment=processor_kwargs.get('frames_per_segment', 2),
-            sampling_strategy=processor_kwargs.get('sampling_strategy', 'adaptive'),
-            quality_filter=processor_kwargs.get('quality_filter', False),
-            aggregation_method=processor_kwargs.get('aggregation_method', 'mean'),
-            visual_similarity_threshold=processor_kwargs.get('visual_similarity_threshold', 0.98)
-        )
-
-        processor = VideoProcessor(config)
+    processor = VideoProcessor(config)
 
     for fname in batch_fnames:
         if not fname.endswith('.mp4'):
@@ -129,86 +125,17 @@ def process_video_batch(batch_fnames, video_dir, text_feat_dir, visual_feat_dir,
                 torch.mps.empty_cache()
             gc.collect()
 
-            if use_new_processor:
-                # NEW: Use refactored VideoProcessor
-                print(f"\nProcessing {fname} with VideoProcessor...")
-                (text_embs, text_meta), (visual_embs, visual_meta) = processor.process_video(
-                    video_path=video_path,
-                    video_id=video_id,
-                    text_feat_dir=text_feat_dir,
-                    visual_feat_dir=visual_feat_dir,
-                    skip_if_exists=True
-                )
-                batch_results[fname] = ((text_embs, text_meta), (visual_embs, visual_meta), None)
-            else:
-                # LEGACY: Original inline implementation
-                text_json_path = os.path.join(text_feat_dir, f"{video_id}.json")
-                visual_json_path = os.path.join(visual_feat_dir, f"{video_id}.json")
+            print(f"\nProcessing {fname} with VideoProcessor...")
 
-                # If BOTH JSON feature files already exist, load embeddings + metadata and skip processing
-                if os.path.exists(text_json_path) and os.path.exists(visual_json_path):
-                    try:
-                        print(f"[SKIP] {fname}: Both text and visual JSONs exist. Loading from files...")
-                        with open(text_json_path, 'r') as f:
-                            text_json = json.load(f)
-                        with open(visual_json_path, 'r') as f:
-                            visual_json = json.load(f)
+            (text_embs, text_meta), (visual_embs, visual_meta) = processor.process_video(
+                video_path=video_path,
+                video_id=video_id,
+                text_feat_dir=text_feat_dir,
+                visual_feat_dir=visual_feat_dir,
+                skip_if_exists=True
+            )
 
-                        # Reconstruct embeddings and metadata
-                        text_embs = [np.array(r['embedding']) if isinstance(r.get('embedding'), list) else np.array(r.get('embedding')) for r in text_json]
-                        text_meta = [{"video_id": video_id, **{k: v for k, v in r.items() if k != 'embedding'}} for r in text_json]
-                        visual_embs = [np.array(r['embedding']) if isinstance(r.get('embedding'), list) else np.array(r.get('embedding')) for r in visual_json]
-                        visual_meta = [{"video_id": video_id, **{k: v for k, v in r.items() if k != 'embedding'}} for r in visual_json]
-
-                        print(f"Loaded {len(text_embs)} text and {len(visual_embs)} visual embeddings from existing files.")
-                        batch_results[fname] = ((text_embs, text_meta), (visual_embs, visual_meta), None)
-                        continue  # Skip ASR and frame extraction
-                    except Exception as e:
-                        # If existing JSONs are corrupt/unreadable, reprocess the video
-                        print(f"Warning: Failed to load existing JSONs for {fname}: {e}. Reprocessing video...")
-
-                print(f"\nProcessing {fname}...")
-                transcript_chunks = transcribe_with_asr(video_path, asr_model_id)
-                print(f"Transcription complete: {len(transcript_chunks)} chunks extracted.")
-
-                nlp, bert_tokenizer, bert_model = load_ner_and_embed_models()
-
-                # Use enhanced extraction with coverage-based deduplication
-                print("Generating text embeddings with coverage-based deduplication...")
-                text_results = extract_entities_and_embed(
-                    transcript_chunks, nlp, bert_tokenizer, bert_model, video_id=video_id,
-                    window_size=256, stride=192,
-                    deduplication_mode='coverage',
-                    min_coverage_contribution=0.05
-                )
-                print(f"Text embeddings generated: {len(text_results)} segments")
-
-                visual_results = extract_frames_and_embed(video_path, text_results, video_id=video_id)
-                print(f"Generated visual embeddings: {len(visual_results)} items.")
-
-                # Apply similarity-based deduplication to visual embeddings
-                print("Applying similarity-based deduplication to visual embeddings...")
-                visual_results = deduplicate_embeddings_similarity(visual_results, similarity_threshold=0.98)
-                print(f"Visual embeddings after deduplication: {len(visual_results)}")
-
-                # Delegate saving to FAISS storage helper
-                try:
-                    save_video_features(video_id, text_results, visual_results, text_feat_dir, visual_feat_dir)
-                except Exception:
-                    pass
-
-                # Enhanced logging
-                print(f"\nResults Summary for {video_id}:")
-                print(f"  - Text embeddings: {len(text_results)}")
-                print(f"  - Visual embeddings: {len(visual_results)}")
-                print(f"  - Text dim: {text_results[0]['embedding'].shape[0] if text_results else 'N/A'}")
-                print(f"  - Visual dim: {visual_results[0]['embedding'].shape[0] if visual_results else 'N/A'}")
-
-                text_embs = [r['embedding'] for r in text_results]
-                text_meta = [{"video_id": video_id, **r} for r in text_results]
-                visual_embs = [r['embedding'] for r in visual_results]
-                visual_meta = [{"video_id": video_id, **r} for r in visual_results]
-                batch_results[fname] = ((text_embs, text_meta), (visual_embs, visual_meta), None)
+            batch_results[fname] = ((text_embs, text_meta), (visual_embs, visual_meta), None)
 
         except Exception as e:
             batch_results[fname] = (None, None, str(e))
@@ -262,7 +189,7 @@ def demo_pipeline(video_path, text_feat_dir, visual_feat_dir, faiss_text_path, f
                  deduplication_mode='coverage', frames_per_segment=2,
                  sampling_strategy='adaptive', quality_filter=False, aggregation_method='mean'):
     """
-    Demo pipeline with configurable hyperparameters.
+    Demo pipeline with configurable hyperparameters using refactored VideoProcessor.
 
     Text embedding hyperparameters:
         window_size: Token window size (default: 256)
@@ -287,76 +214,48 @@ def demo_pipeline(video_path, text_feat_dir, visual_feat_dir, faiss_text_path, f
 
     video_id = os.path.splitext(fname)[0]
     video_path = os.path.join(video_dir, fname)
-    text_json_path = os.path.join(text_feat_dir, f"{video_id}.json")
-    visual_json_path = os.path.join(visual_feat_dir, f"{video_id}.json")
 
     print(f"Processing video: {video_path}")
+    print(f"\nUsing VideoProcessor with hyperparameters:")
+    print(f"  Text: window_size={window_size}, stride={stride}, dedup={deduplication_mode}")
+    print(f"  Visual: frames={frames_per_segment}, strategy={sampling_strategy}, agg={aggregation_method}")
 
-    # ASR
-    transcript_chunks = transcribe_with_asr(video_path)
-
-    print(f"Transcription complete: {len(transcript_chunks)} chunks extracted.")
-
-    # NER + text embedding with configurable parameters
-    nlp, bert_tokenizer, bert_model = load_ner_and_embed_models()
-    print(f"\nGenerating text embeddings with hyperparameters:")
-    print(f"  window_size={window_size}, stride={stride}")
-    print(f"  min_coverage_contribution={min_coverage_contribution}, deduplication_mode={deduplication_mode}")
-    text_results = extract_entities_and_embed(
-        transcript_chunks, nlp, bert_tokenizer, bert_model, video_id=video_id,
+    # Create VideoProcessor configuration
+    config = VideoProcessorConfig(
         window_size=window_size,
         stride=stride,
+        min_coverage_contribution=min_coverage_contribution,
         deduplication_mode=deduplication_mode,
-        min_coverage_contribution=min_coverage_contribution
-    )
-
-    print(f"\nText embeddings generated: {len(text_results)} segments")
-
-    # Convert embeddings to lists for JSON serialization
-    # Save textual features to JSON
-    text_results_serializable = []
-    for r in text_results:
-        r_copy = r.copy()
-        if isinstance(r_copy.get('embedding'), np.ndarray):
-            r_copy['embedding'] = r_copy['embedding'].tolist()
-        text_results_serializable.append(r_copy)
-    with open(text_json_path, 'w') as f:
-        json.dump(text_results_serializable, f)
-
-    # Visual embedding with configurable parameters
-    print(f"\nGenerating visual embeddings with hyperparameters:")
-    print(f"  frames_per_segment={frames_per_segment}, sampling_strategy={sampling_strategy}")
-    print(f"  quality_filter={quality_filter}, aggregation_method={aggregation_method}")
-    visual_results = extract_frames_and_embed(
-        video_path, text_results, video_id=video_id,
         frames_per_segment=frames_per_segment,
         sampling_strategy=sampling_strategy,
         quality_filter=quality_filter,
         aggregation_method=aggregation_method
     )
 
-    print(f"Generated visual embeddings: {len(visual_results)} items.")
+    # Process video with VideoProcessor
+    processor = VideoProcessor(config)
+    (text_embs, text_meta), (visual_embs, visual_meta) = processor.process_video(
+        video_path=video_path,
+        video_id=video_id,
+        text_feat_dir=text_feat_dir,
+        visual_feat_dir=visual_feat_dir,
+        skip_if_exists=True
+    )
 
-    # Apply similarity-based deduplication to visual embeddings
-    print("\nApplying similarity-based deduplication to visual embeddings...")
-    visual_results = deduplicate_embeddings_similarity(visual_results, similarity_threshold=0.98)
+    # Convert back to results format for FAISS storage
+    text_results = [meta for meta in text_meta]
+    for i, emb in enumerate(text_embs):
+        text_results[i]['embedding'] = emb
 
-    print(f"Visual embeddings after deduplication: {len(visual_results)}")
-    # Convert embeddings to lists for JSON serialization
-    # Save visual features to JSON
-    visual_results_serializable = []
-    for r in visual_results:
-        r_copy = r.copy()
-        if isinstance(r_copy.get('embedding'), np.ndarray):
-            r_copy['embedding'] = r_copy['embedding'].tolist()
-        visual_results_serializable.append(r_copy)
-    with open(visual_json_path, 'w') as f:
-        json.dump(visual_results_serializable, f)
+    visual_results = [meta for meta in visual_meta]
+    for i, emb in enumerate(visual_embs):
+        visual_results[i]['embedding'] = emb
+
     # Save to FAISS
-    text_db = FaissDB(dim=text_results[0]['embedding'].shape[0], index_path=faiss_text_path)
-    visual_db = FaissDB(dim=visual_results[0]['embedding'].shape[0], index_path=faiss_visual_path)
-    text_db.add([r['embedding'] for r in text_results], text_results)
-    visual_db.add([r['embedding'] for r in visual_results], visual_results)
+    text_db = FaissDB(dim=len(text_embs[0]) if text_embs else 768, index_path=faiss_text_path)
+    visual_db = FaissDB(dim=len(visual_embs[0]) if visual_embs else 512, index_path=faiss_visual_path)
+    text_db.add(text_embs, text_results)
+    visual_db.add(visual_embs, visual_results)
     text_db.save()
     visual_db.save()
     print("Databases saved.")
@@ -364,15 +263,18 @@ def demo_pipeline(video_path, text_feat_dir, visual_feat_dir, faiss_text_path, f
     # Enhanced logging for demo results
     print(f"\nFinal Results Summary:")
     print(f"- Video ID: {video_id}")
-    print(f"- Text embeddings after deduplication: {len(text_results)}")
-    print(f"- Visual embeddings after deduplication: {len(visual_results)}")
-    print(f"- Text FAISS index dimension: {text_results[0]['embedding'].shape[0] if text_results else 'N/A'}")
-    print(f"- Visual FAISS index dimension: {visual_results[0]['embedding'].shape[0] if visual_results else 'N/A'}")
+    print(f"- Text embeddings: {len(text_results)}")
+    print(f"- Visual embeddings: {len(visual_results)}")
+    print(f"- Text FAISS index dimension: {len(text_embs[0]) if text_embs else 'N/A'}")
+    print(f"- Visual FAISS index dimension: {len(visual_embs[0]) if visual_embs else 'N/A'}")
 
     # Query demo with multimodal search (matching query_faiss.py output format)
     query = "How to do a mouth cancer check at home?"
 
     # Generate query embeddings for both text and visual modalities
+    bert_tokenizer = AutoTokenizer.from_pretrained("emilyalsentzer/Bio_ClinicalBERT")
+    bert_model = AutoModel.from_pretrained("emilyalsentzer/Bio_ClinicalBERT")
+
     inputs = bert_tokenizer(query, return_tensors="pt", truncation=True, padding=True, max_length=512)
     with torch.no_grad():
         outputs = bert_model(**inputs)
@@ -537,15 +439,9 @@ def demo_pipeline(video_path, text_feat_dir, visual_feat_dir, faiss_text_path, f
 def process_video(fname, video_dir, text_feat_dir, visual_feat_dir,
                  window_size=256, stride=192, min_coverage_contribution=0.05,
                  deduplication_mode='coverage', frames_per_segment=2,
-                 sampling_strategy='adaptive', quality_filter=False, aggregation_method='mean',
-                 use_new_processor=True):
+                 sampling_strategy='adaptive', quality_filter=False, aggregation_method='mean'):
     """
     Process a single video with configurable hyperparameters.
-
-    Args:
-        use_new_processor: If True, use refactored VideoProcessor class (recommended).
-                          If False, use legacy inline implementation.
-
     See demo_pipeline docstring for parameter descriptions.
     """
     if not fname.endswith('.mp4'):
@@ -554,122 +450,25 @@ def process_video(fname, video_dir, text_feat_dir, visual_feat_dir,
     video_id = os.path.splitext(fname)[0]
     video_path = os.path.join(video_dir, fname)
 
-    if use_new_processor:
-        from video_processing.pipeline import VideoProcessorConfig
-
-        config = VideoProcessorConfig(
-            window_size=window_size,
-            stride=stride,
-            min_coverage_contribution=min_coverage_contribution,
-            deduplication_mode=deduplication_mode,
-            frames_per_segment=frames_per_segment,
-            sampling_strategy=sampling_strategy,
-            quality_filter=quality_filter,
-            aggregation_method=aggregation_method
-        )
-
-        processor = VideoProcessor(config)
-        return processor.process_video(
-            video_path, video_id,
-            text_feat_dir=text_feat_dir,
-            visual_feat_dir=visual_feat_dir,
-            skip_if_exists=True
-        )
-
-    # LEGACY: Original inline implementation (kept for backward compatibility)
-    text_json_path = os.path.join(text_feat_dir, f"{video_id}.json")
-    visual_json_path = os.path.join(visual_feat_dir, f"{video_id}.json")
-    # If both JSON files exist, load embeddings from them and return (SKIP ASR + FRAME EXTRACTION)
-    if os.path.exists(text_json_path) and os.path.exists(visual_json_path):
-        print(f"[SKIP] {fname}: Both text and visual JSONs exist. Loading from files (no ASR/frame extraction needed)...")
-        try:
-            with open(text_json_path, 'r') as f:
-                text_json = json.load(f)
-            with open(visual_json_path, 'r') as f:
-                visual_json = json.load(f)
-
-            # Reconstruct embeddings and metadata
-            text_embs = [np.array(r['embedding']) for r in text_json]
-            text_meta = [{"video_id": video_id, **{k: v for k, v in r.items() if k != 'embedding'}} for r in text_json]
-
-            visual_embs = [np.array(r['embedding']) for r in visual_json]
-            visual_meta = [{"video_id": video_id, **{k: v for k, v in r.items() if k != 'embedding'}} for r in visual_json]
-
-            print(f"✅ Loaded {len(text_embs)} text and {len(visual_embs)} visual embeddings from existing files (ASR/frame extraction skipped).")
-            return (text_embs, text_meta), (visual_embs, visual_meta)
-        except Exception as e:
-            print(f"⚠️  Warning: Failed to load existing JSONs: {e}. Reprocessing video...")
-            # Fall through to reprocess the video
-
-    # Each thread loads its own models
-    nlp, bert_tokenizer, bert_model = load_ner_and_embed_models()
-
-    try:
-        print(f"\nProcessing {fname}...")
-        transcript_chunks = transcribe_with_asr(video_path)
-        print(f"Transcription complete: {len(transcript_chunks)} chunks extracted.")
-    except Exception as e:
-        print(f"ASR failed for {video_path}: {e}")
-        return None, None
-
-    # Use enhanced extraction with configurable parameters
-    print(f"Generating text embeddings (ws={window_size}, stride={stride}, dedup={deduplication_mode})...")
-    text_results = extract_entities_and_embed(
-        transcript_chunks, nlp, bert_tokenizer, bert_model, video_id=video_id,
+    config = VideoProcessorConfig(
         window_size=window_size,
         stride=stride,
+        min_coverage_contribution=min_coverage_contribution,
         deduplication_mode=deduplication_mode,
-        min_coverage_contribution=min_coverage_contribution
-    )
-    print(f"Text embeddings generated: {len(text_results)} segments")
-
-    # Convert embeddings to lists for JSON serialization
-    text_results_serializable = []
-    for r in text_results:
-        r_copy = r.copy()
-        if isinstance(r_copy.get('embedding'), np.ndarray):
-            r_copy['embedding'] = r_copy['embedding'].tolist()
-        text_results_serializable.append(r_copy)
-    with open(text_json_path, 'w') as f:
-        json.dump(text_results_serializable, f)
-    text_embs = [r['embedding'] for r in text_results]
-    text_meta = [{"video_id": video_id, **r} for r in text_results]
-
-    visual_results = extract_frames_and_embed(
-        video_path, text_results, video_id=video_id,
         frames_per_segment=frames_per_segment,
         sampling_strategy=sampling_strategy,
         quality_filter=quality_filter,
         aggregation_method=aggregation_method
     )
-    print(f"Generated visual embeddings: {len(visual_results)} items.")
 
-    # Apply similarity-based deduplication to visual embeddings
-    print("Applying similarity-based deduplication to visual embeddings...")
-    visual_results = deduplicate_embeddings_similarity(visual_results, similarity_threshold=0.98)
-    print(f"Visual embeddings after deduplication: {len(visual_results)}")
+    processor = VideoProcessor(config)
 
-    # Convert embeddings to lists for JSON serialization
-    visual_results_serializable = []
-    for r in visual_results:
-        r_copy = r.copy()
-        if isinstance(r_copy.get('embedding'), np.ndarray):
-            r_copy['embedding'] = r_copy['embedding'].tolist()
-        visual_results_serializable.append(r_copy)
-    with open(visual_json_path, 'w') as f:
-        json.dump(visual_results_serializable, f)
-    visual_embs = [r['embedding'] for r in visual_results]
-    visual_meta = [{"video_id": video_id, **r} for r in visual_results]
-
-    # Enhanced logging
-    print(f"\nResults Summary for {video_id}:")
-    print(f"  - Text embeddings: {len(text_results)}")
-    print(f"  - Visual embeddings: {len(visual_results)}")
-    print(f"  - Text dim: {text_results[0]['embedding'].shape[0] if text_results else 'N/A'}")
-    print(f"  - Visual dim: {visual_results[0]['embedding'].shape[0] if visual_results else 'N/A'}")
-
-    return (text_embs, text_meta), (visual_embs, visual_meta)
-
+    return processor.process_video(
+        video_path, video_id,
+        text_feat_dir=text_feat_dir,
+        visual_feat_dir=visual_feat_dir,
+        skip_if_exists=True
+    )
 
 def process_split(split, video_dir, text_feat_dir, visual_feat_dir, faiss_text_path, faiss_visual_path,
                  window_size=256, stride=192, min_coverage_contribution=0.05,
