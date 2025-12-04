@@ -1,15 +1,16 @@
 """
-hierarchical_search_utils.py
+Hierarchical Search Module
 
-Shared utilities for hierarchical search with fine-grained timestamp refinement.
-Used by both multimodal_pipeline_with_sliding_window.py and query_faiss.py.
+Fine-grained timestamp refinement and context expansion for search results.
 """
-
 import os
 import json
+from typing import List, Dict, Optional, Union
 
 
-def refine_with_precise_timestamps(search_results, segments_data, result_format='query_faiss'):
+def refine_with_precise_timestamps(search_results: List[Dict],
+                                   segments_data: Union[List[Dict], Dict[str, List[Dict]]],
+                                   result_format: str = 'query_faiss') -> List[Dict]:
     """
     Core hierarchical search logic: refine coarse search results with precise timestamps.
 
@@ -103,7 +104,8 @@ def refine_with_precise_timestamps(search_results, segments_data, result_format=
     return refined_results
 
 
-def load_segments_from_json_files(video_ids, json_dir):
+def load_segments_from_json_files(video_ids: Union[List[str], set],
+                                  json_dir: str) -> Dict[str, List[Dict]]:
     """
     Load segment data from JSON files for multiple videos.
     Recursively searches through subdirectories (train/test/val) if needed.
@@ -154,7 +156,9 @@ def load_segments_from_json_files(video_ids, json_dir):
     return segments_by_video
 
 
-def hierarchical_search(query_emb, faiss_db, segments_data, top_k=5, enable_fine_grained=True, result_format='multimodal'):
+def hierarchical_search(query_emb, faiss_db, segments_data: Union[List[Dict], Dict[str, List[Dict]]],
+                       top_k: int = 5, enable_fine_grained: bool = True,
+                       result_format: str = 'multimodal') -> List[Dict]:
     """
     Complete hierarchical search: coarse FAISS search + fine-grained timestamp refinement.
 
@@ -194,7 +198,9 @@ def hierarchical_search(query_emb, faiss_db, segments_data, top_k=5, enable_fine
     return refined_results[:top_k]
 
 
-def get_extended_context(segment_id, segments_data, context_windows=1):
+def get_extended_context(segment_id: str,
+                        segments_data: Union[List[Dict], Dict[str, List[Dict]]],
+                        context_windows: int = 1) -> Optional[Dict]:
     """
     Retrieve surrounding windows for richer context.
 

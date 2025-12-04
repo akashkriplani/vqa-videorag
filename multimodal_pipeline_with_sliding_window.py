@@ -13,41 +13,27 @@ import torch
 import numpy as np
 import open_clip
 import getpass
-import json
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from dotenv import load_dotenv
 from huggingface_hub import login as hf_login
-
-from video_processing import (
-    transcribe_with_asr,
-    load_ner_and_embed_models,
-    extract_entities_and_embed,
-    extract_frames_and_embed,
-    deduplicate_embeddings_similarity,
-    VideoProcessor
-)
-
+from video_processing import VideoProcessor
 from video_processing.pipeline import VideoProcessorConfig
-
-from embedding_storage import FaissDB, save_video_features, save_faiss_indices_from_lists
+from embedding_storage import FaissDB, save_faiss_indices_from_lists
 from data_preparation import filter_json_by_embeddings
-from hierarchical_search_utils import hierarchical_search
 from transformers import AutoTokenizer, AutoModel
 
-# Import aggregation and output formatting from query_faiss for consistency
+
 try:
-    from query_faiss import aggregate_results_by_segment, print_segment_results, format_timestamp
+    from search import (
+        aggregate_results_by_segment,
+        print_segment_results,
+        HybridSearchEngine,
+        load_segments_from_json_dir
+    )
 except ImportError:
-    print("Warning: Could not import from query_faiss. Multimodal aggregation may not be available.")
+    print("Warning: Could not import from search module. Search functionality may not be available.")
     aggregate_results_by_segment = None
     print_segment_results = None
-    format_timestamp = None
-
-# Import hybrid search functionality
-try:
-    from hybrid_search import HybridSearchEngine, load_segments_from_json_dir
-except ImportError:
-    print("Warning: Could not import hybrid_search. Hybrid search will not be available.")
     HybridSearchEngine = None
     load_segments_from_json_dir = None
 
@@ -167,23 +153,6 @@ def parallel_process_videos(fnames, video_dir, text_feat_dir, visual_feat_dir, a
     return results
 
 # 4. Demo pipeline
-
-# Hierarchical search functions now imported from hierarchical_search_utils
-# Legacy wrapper for backward compatibility
-def hierarchical_search_legacy(query_emb, text_db, json_data, top_k=5, enable_fine_grained=True):
-    """
-    Legacy wrapper for hierarchical_search - delegates to shared utility.
-    Kept for backward compatibility with existing code.
-    """
-    return hierarchical_search(
-        query_emb=query_emb,
-        faiss_db=text_db,
-        segments_data=json_data,
-        top_k=top_k,
-        enable_fine_grained=enable_fine_grained,
-        result_format='multimodal'
-    )
-
 def demo_pipeline(video_path, text_feat_dir, visual_feat_dir, faiss_text_path, faiss_visual_path,
                  window_size=256, stride=192, min_coverage_contribution=0.05,
                  deduplication_mode='coverage', frames_per_segment=2,
