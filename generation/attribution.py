@@ -1,5 +1,5 @@
 """
-attribution.py
+generation/attribution.py
 
 Self-reflection attribution for Medical VideoRAG answers.
 
@@ -9,12 +9,6 @@ Features:
 - Confidence annotation (HIGH/MEDIUM/LOW/UNSUPPORTED)
 - Conflict highlighting for contradictory evidence
 - Attribution accuracy tracking
-
-Usage:
-    from attribution import SelfReflectionAttribution
-
-    attributor = SelfReflectionAttribution()
-    attribution = attributor.generate_attribution(answer, evidence_segments, conflicts)
 """
 
 import numpy as np
@@ -92,27 +86,26 @@ class SelfReflectionAttribution:
 
         Returns:
             {
-                'attribution_map': List[Dict],  # Per-claim attribution
-                'overall_confidence': float,     # Overall answer confidence
-                'unsupported_claims': int,       # Count of unsupported claims
-                'conflicted_claims': int,        # Count of conflicted claims
-                'claim_count': int               # Total claims
+                'attribution_map': List[Dict],
+                'overall_confidence': float,
+                'unsupported_claims': int,
+                'conflicted_claims': int,
+                'claim_count': int,
+                'support_breakdown': Dict
             }
         """
         print(f"\n{'='*80}")
         print("GENERATING ATTRIBUTION MAP")
         print(f"{'='*80}")
 
-        # Step 1: Extract claims from answer
+        # Extract claims from answer
         claims = self.extract_claims(answer)
         print(f"Extracted {len(claims)} claims from answer")
 
-        # Step 2: Map each claim to evidence
+        # Map each claim to evidence
         attribution_map = []
         for i, claim in enumerate(claims, 1):
             print(f"  Mapping claim {i}/{len(claims)}...")
-
-            # Find supporting evidence
             attribution = self.map_claim_to_evidence(claim, evidence_segments)
 
             # Check for conflicts
@@ -121,7 +114,7 @@ class SelfReflectionAttribution:
 
             attribution_map.append(attribution)
 
-        # Step 3: Calculate overall statistics
+        # Calculate overall statistics
         stats = self._calculate_attribution_stats(attribution_map)
 
         print(f"\nAttribution complete:")
@@ -145,12 +138,10 @@ class SelfReflectionAttribution:
             return []
 
         if self.nlp:
-            # Use SciSpacy for medical text
             doc = self.nlp(answer_text)
             claims = [sent.text.strip() for sent in doc.sents if sent.text.strip()]
         else:
             # Fallback: simple sentence splitting
-            # Handle common medical abbreviations
             text = answer_text
             # Protect abbreviations
             text = re.sub(r'\b([A-Z][a-z]*\.)', r'\1<PROT>', text)
@@ -175,7 +166,7 @@ class SelfReflectionAttribution:
         Returns:
             {
                 'claim': str,
-                'support_level': str,  # 'HIGH', 'MEDIUM', 'LOW', 'UNSUPPORTED'
+                'support_level': str,
                 'evidence_id': Optional[str],
                 'video_id': Optional[str],
                 'timestamp': Optional[list],
@@ -218,7 +209,6 @@ class SelfReflectionAttribution:
             if similarity > best_similarity:
                 best_similarity = similarity
                 best_match = seg
-                # Extract exact quote if possible
                 best_quote = self._extract_quote(claim, seg_text)
 
         # Assess support level
@@ -226,7 +216,6 @@ class SelfReflectionAttribution:
 
         # Format result
         if best_match:
-            # Format timestamp
             timestamp = best_match.get('timestamp')
             if isinstance(timestamp, (list, tuple)) and len(timestamp) == 2:
                 formatted_time = self._format_timestamp(timestamp)
@@ -260,12 +249,9 @@ class SelfReflectionAttribution:
     def _calculate_semantic_similarity(self, text1: str, text2: str) -> float:
         """
         Calculate semantic similarity between two texts.
-
-        Uses sentence transformer if available, otherwise Jaccard similarity.
         """
         if self.sentence_model:
             try:
-                # Use sentence transformer
                 embeddings = self.sentence_model.encode([text1, text2])
                 similarity = np.dot(embeddings[0], embeddings[1]) / (
                     np.linalg.norm(embeddings[0]) * np.linalg.norm(embeddings[1])
@@ -274,7 +260,7 @@ class SelfReflectionAttribution:
             except:
                 pass
 
-        # Fallback: Jaccard similarity on words
+        # Fallback: Jaccard similarity
         words1 = set(text1.lower().split())
         words2 = set(text2.lower().split())
 
@@ -289,8 +275,6 @@ class SelfReflectionAttribution:
     def _extract_quote(self, claim: str, segment_text: str, context_words: int = 10) -> Optional[str]:
         """
         Extract relevant quote from segment that supports claim.
-
-        Finds the most similar sentence or phrase in the segment.
         """
         # Split segment into sentences
         if self.nlp:
@@ -331,7 +315,7 @@ class SelfReflectionAttribution:
         Assess support level for a claim.
 
         Levels:
-        - HIGH: Strong semantic similarity (>0.7) or exact match
+        - HIGH: Strong semantic similarity (>0.7)
         - MEDIUM: Moderate similarity (0.5-0.7)
         - LOW: Weak similarity (0.3-0.5)
         - UNSUPPORTED: No good match (<0.3)
@@ -362,13 +346,13 @@ class SelfReflectionAttribution:
         conflicts: List[Dict]
     ) -> Dict:
         """
-        Annotate attribution with conflict warnings if evidence is conflicted.
+        Annotate attribution with conflict warnings.
         """
         evidence_id = attribution.get('evidence_id')
         if not evidence_id:
             return attribution
 
-        # Check if this evidence is involved in any conflicts
+        # Check if this evidence is involved in conflicts
         for conflict in conflicts:
             if evidence_id in conflict.get('segments', []):
                 attribution['conflict_warning'] = conflict.get('description', 'Evidence conflicts with other segments')
@@ -432,12 +416,6 @@ class SelfReflectionAttribution:
     def format_attribution_output(self, attribution_result: Dict) -> str:
         """
         Format attribution map for display.
-
-        Args:
-            attribution_result: Output from generate_attribution()
-
-        Returns:
-            Formatted string for console/UI display
         """
         output = []
         output.append("=" * 80)
@@ -448,7 +426,6 @@ class SelfReflectionAttribution:
         output.append(f"Unsupported: {attribution_result['unsupported_claims']}")
         output.append(f"Conflicted: {attribution_result['conflicted_claims']}")
 
-        # Show support breakdown
         if 'support_breakdown' in attribution_result:
             breakdown = attribution_result['support_breakdown']
             output.append(f"\nSupport Breakdown:")
@@ -465,7 +442,6 @@ class SelfReflectionAttribution:
         for i, attr in enumerate(attribution_result['attribution_map'], 1):
             level = attr['support_level']
 
-            # Choose indicator based on support level
             if level == 'HIGH':
                 indicator = "✅"
             elif level == 'MEDIUM':
@@ -496,57 +472,3 @@ class SelfReflectionAttribution:
         output.append("=" * 80)
 
         return "\n".join(output)
-
-
-# Example usage
-if __name__ == "__main__":
-    import json
-
-    print("SelfReflectionAttribution Demo")
-    print("=" * 80)
-
-    # Sample answer and evidence
-    sample_answer = """CPR involves chest compressions at 100-120 per minute. First, check for responsiveness and call emergency services. Position your hands in the center of the chest and compress at least 2 inches deep. Continue compressions until help arrives."""
-
-    sample_evidence = [
-        {
-            'segment_id': 'video_123_seg_2',
-            'video_id': 'video_123',
-            'timestamp': [135, 150],
-            'text_evidence': {
-                'text': 'When performing CPR, chest compressions should be delivered at a rate of 100 to 120 compressions per minute. This ensures adequate blood flow to vital organs.'
-            }
-        },
-        {
-            'segment_id': 'video_123_seg_1',
-            'video_id': 'video_123',
-            'timestamp': [90, 105],
-            'text_evidence': {
-                'text': 'First, assess the patient for responsiveness by tapping their shoulders and asking if they are okay. If unresponsive, immediately call for emergency medical services.'
-            }
-        }
-    ]
-
-    # Initialize attributor
-    attributor = SelfReflectionAttribution()
-
-    # Generate attribution
-    attribution = attributor.generate_attribution(
-        answer=sample_answer,
-        evidence_segments=sample_evidence,
-        conflicts=None
-    )
-
-    # Display formatted output
-    print("\n" + attributor.format_attribution_output(attribution))
-
-    # Save to JSON
-    output_file = "attribution_demo.json"
-    with open(output_file, 'w') as f:
-        json.dump({
-            'answer': sample_answer,
-            'evidence_count': len(sample_evidence),
-            'attribution': attribution
-        }, f, indent=2)
-
-    print(f"\n✅ Demo complete! Attribution saved to {output_file}")

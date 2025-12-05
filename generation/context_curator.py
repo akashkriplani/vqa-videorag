@@ -1,5 +1,5 @@
 """
-context_selector.py
+generation/context_curator.py
 
 Adaptive context selection with factual grounding for Medical VideoRAG.
 
@@ -10,22 +10,19 @@ Features:
 - Contradiction detection and resolution
 - Query-type aware adaptive selection
 - Diversity sampling and token budgeting
-
-Usage:
-    from context_selector import ContextSelector
-
-    selector = ContextSelector(config)
-    curated = selector.curate_context(query, segments, query_type)
 """
 
-import numpy as np
-import torch
 import re
+import os
+import torch
+import spacy
+import warnings
+import numpy as np
 from typing import List, Dict, Optional, Tuple, Set
 from collections import defaultdict
-import warnings
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
-# Suppress warnings for cleaner output
+# Suppress warnings
 warnings.filterwarnings('ignore')
 
 
@@ -82,18 +79,16 @@ class ContextSelector:
 
         if self.use_nli:
             try:
-                from transformers import AutoTokenizer, AutoModelForSequenceClassification
-
-                print(f"Loading NLI model: {nli_model_path}...")
+                print(f"Loading NLI model: {nli_model_path}")
                 self.nli_tokenizer = AutoTokenizer.from_pretrained(nli_model_path)
                 self.nli_model = AutoModelForSequenceClassification.from_pretrained(nli_model_path)
                 self.nli_model.to(self.device)
                 self.nli_model.eval()
-                print("✅ NLI model loaded successfully")
+                print("✅ NLI model loaded for factuality scoring")
 
             except Exception as e:
-                print(f"⚠️  Failed to load NLI model: {e}")
-                print("   Falling back to rule-based scoring only")
+                print(f"⚠️  NLI model loading failed: {e}")
+                print("   Factuality scoring will be limited")
                 self.use_nli = False
 
         # Load medical entity recognizer (scispacy)
@@ -101,6 +96,7 @@ class ContextSelector:
         try:
             import spacy
             self.nlp = spacy.load("en_core_sci_sm")
+            print("✅ SciSpacy loaded for entity extraction")
         except Exception as e:
             print(f"⚠️  SciSpacy not available: {e}")
             print("   Entity overlap scoring will be limited")
@@ -110,22 +106,22 @@ class ContextSelector:
             'procedural': {
                 'max_segments': 5,
                 'prioritize': 'temporal_order',
-                'diversity_threshold': 0.85  # Low diversity (prefer sequential)
+                'diversity_threshold': 0.85
             },
             'diagnostic': {
                 'max_segments': 6,
                 'prioritize': 'diversity',
-                'diversity_threshold': 0.70  # High diversity
+                'diversity_threshold': 0.70
             },
             'factoid': {
                 'max_segments': 2,
                 'prioritize': 'top_score',
-                'diversity_threshold': 0.95  # No diversity needed
+                'diversity_threshold': 0.95
             },
             'general': {
                 'max_segments': 3,
                 'prioritize': 'balanced',
-                'diversity_threshold': 0.80  # Medium diversity
+                'diversity_threshold': 0.80
             }
         }
 
@@ -147,9 +143,9 @@ class ContextSelector:
 
         Returns:
             {
-                'selected_segments': List[Dict],  # Curated segments
-                'conflicts_detected': List[Dict],  # Contradictions found
-                'stats': Dict                       # Processing statistics
+                'selected_segments': List[Dict],
+                'conflicts_detected': List[Dict],
+                'stats': Dict
             }
         """
         print(f"\n{'='*80}")
@@ -185,11 +181,10 @@ class ContextSelector:
         stats['after_relevance_scoring'] = len(scored_segments)
         print(f"After relevance scoring: {len(scored_segments)} segments")
 
-        # Step 3: NLI factuality scoring (on top-15 candidates)
+        # Step 3: NLI factuality scoring
         if self.use_nli and len(scored_segments) > 0:
             top_candidates = scored_segments[:min(15, len(scored_segments))]
             nli_scored = self.score_nli_factuality(query, top_candidates)
-            # Merge back with remaining segments
             scored_segments = nli_scored + scored_segments[len(nli_scored):]
             stats['after_nli_scoring'] = len(scored_segments)
             print(f"After NLI scoring: {len(scored_segments)} segments")
@@ -241,7 +236,7 @@ class ContextSelector:
             text_evidence = seg.get('text_evidence', {})
             if text_evidence:
                 text = text_evidence.get('text', '')
-                if len(text.strip()) < 50:
+                if len(text) < 50:
                     continue
 
             # Check valid timestamp
@@ -271,40 +266,33 @@ class ContextSelector:
             relevance = 0.4 * semantic_sim + 0.3 * entity_overlap +
                        0.2 * question_match + 0.1 * retrieval_confidence
         """
-        # Extract query entities
         query_entities = self._extract_entities(query)
 
         scored = []
         for seg in segments:
-            # Get existing retrieval scores
             text_score = seg.get('text_score', 0.0)
             visual_score = seg.get('visual_score', 0.0)
             combined_score = seg.get('combined_score', 0.0)
 
-            # Semantic similarity (use existing text_score as proxy)
-            semantic_sim = text_score
-
-            # Entity overlap
+            # Get segment text
             text_evidence = seg.get('text_evidence', {})
-            if text_evidence:
-                seg_text = text_evidence.get('text', '')
-                seg_entities = self._extract_entities(seg_text)
-                entity_overlap = self._calculate_entity_overlap(query_entities, seg_entities)
-            else:
-                entity_overlap = 0.0
+            seg_text = text_evidence.get('text', '') if text_evidence else ''
 
-            # Question type alignment
+            # Calculate entity overlap
+            seg_entities = self._extract_entities(seg_text)
+            entity_overlap = self._calculate_entity_overlap(query_entities, seg_entities)
+
+            # Calculate question type alignment
             question_match = self._score_question_alignment(query_type, seg)
 
-            # Calculate relevance score
+            # Compute final relevance score
             relevance_score = (
-                0.4 * semantic_sim +
+                0.4 * text_score +
                 0.3 * entity_overlap +
                 0.2 * question_match +
-                0.1 * combined_score  # Original retrieval confidence
+                0.1 * combined_score
             )
 
-            # Add relevance score to segment
             seg['relevance_score'] = relevance_score
             scored.append(seg)
 
@@ -321,10 +309,7 @@ class ContextSelector:
         """
         Score factual alignment using NLI model.
 
-        Returns segments with NLI scores added:
-        - nli_entailment: Segment supports query
-        - nli_neutral: Segment unrelated to query
-        - nli_contradiction: Segment conflicts with query
+        Returns segments with NLI scores added.
         """
         if not self.use_nli or not self.nli_model:
             return segments
@@ -333,37 +318,28 @@ class ContextSelector:
 
         for seg in segments:
             text_evidence = seg.get('text_evidence', {})
-            if not text_evidence:
-                scored.append(seg)
-                continue
+            seg_text = text_evidence.get('text', '') if text_evidence else ''
 
-            seg_text = text_evidence.get('text', '')
             if not seg_text:
                 scored.append(seg)
                 continue
 
-            # Score NLI alignment
+            # Compute NLI scores
             nli_scores = self._compute_nli_scores(query, seg_text)
 
             # Add NLI scores to segment
-            seg['nli_entailment'] = nli_scores['entailment']
-            seg['nli_neutral'] = nli_scores['neutral']
-            seg['nli_contradiction'] = nli_scores['contradiction']
+            seg['nli_entailment'] = nli_scores.get('entailment', 0.0)
+            seg['nli_neutral'] = nli_scores.get('neutral', 0.0)
+            seg['nli_contradiction'] = nli_scores.get('contradiction', 0.0)
 
-            # Update relevance score with NLI
+            # Update final score
             relevance_score = seg.get('relevance_score', 0.0)
-
-            # Combine rule-based and NLI scores
             final_score = (
-                0.6 * relevance_score +
-                0.4 * nli_scores['entailment']
+                0.7 * relevance_score +
+                0.3 * seg['nli_entailment']
             )
-
-            # Heavy penalty for contradictions
-            if nli_scores['contradiction'] > 0.5:
-                final_score *= 0.5
-
             seg['final_score'] = final_score
+
             scored.append(seg)
 
         # Sort by final score
@@ -386,43 +362,30 @@ class ContextSelector:
 
         # Check all pairs for contradictions
         for i in range(len(segments)):
-            if i in segments_to_remove:
-                continue
-
             for j in range(i + 1, len(segments)):
-                if j in segments_to_remove:
-                    continue
-
-                seg_i = segments[i]
-                seg_j = segments[j]
-
-                # Check for contradictions
-                conflict_type = self._check_contradiction(seg_i, seg_j)
+                conflict_type = self._check_contradiction(segments[i], segments[j])
 
                 if conflict_type:
-                    # Found a conflict
-                    score_i = seg_i.get('final_score', seg_i.get('relevance_score', 0.0))
-                    score_j = seg_j.get('final_score', seg_j.get('relevance_score', 0.0))
-
-                    # Keep higher scoring segment
-                    if score_i >= score_j:
-                        segments_to_remove.add(j)
-                        kept_seg = i
-                        removed_seg = j
-                    else:
-                        segments_to_remove.add(i)
-                        kept_seg = j
-                        removed_seg = i
-
-                    conflicts.append({
-                        'segments': [
-                            segments[i].get('segment_id', f'seg_{i}'),
-                            segments[j].get('segment_id', f'seg_{j}')
-                        ],
+                    # Record conflict
+                    conflict = {
                         'type': conflict_type,
+                        'segments': [
+                            segments[i].get('segment_id'),
+                            segments[j].get('segment_id')
+                        ],
                         'description': self._describe_conflict(conflict_type, segments[i], segments[j]),
-                        'resolution': f"Kept segment {kept_seg} (score: {segments[kept_seg].get('final_score', 0.0):.4f}), removed segment {removed_seg} (score: {segments[removed_seg].get('final_score', 0.0):.4f})"
-                    })
+                        'resolution': 'Removed lower-scored segment'
+                    }
+                    conflicts.append(conflict)
+
+                    # Remove lower-scored segment
+                    score_i = segments[i].get('final_score', segments[i].get('relevance_score', 0.0))
+                    score_j = segments[j].get('final_score', segments[j].get('relevance_score', 0.0))
+
+                    if score_i < score_j:
+                        segments_to_remove.add(i)
+                    else:
+                        segments_to_remove.add(j)
 
         # Remove conflicting segments
         cleaned_segments = [seg for i, seg in enumerate(segments) if i not in segments_to_remove]
@@ -452,21 +415,17 @@ class ContextSelector:
 
         # Apply strategy
         if prioritize == 'top_score':
-            # Simply take top segments
             selected = segments[:max_segments]
 
         elif prioritize == 'diversity':
-            # Diversity sampling
             selected = self._diversity_sample(segments, max_segments, diversity_threshold)
 
         elif prioritize == 'temporal_order':
-            # Sort by timestamp for procedural questions
-            temporal_sorted = sorted(segments, key=lambda x: x.get('timestamp', [0, 0])[0])
-            selected = temporal_sorted[:max_segments]
+            sorted_by_time = sorted(segments[:max_segments * 2], key=lambda x: x.get('timestamp', [0])[0])
+            selected = sorted_by_time[:max_segments]
 
         else:  # balanced
-            # Mix of top scores and diversity
-            selected = self._diversity_sample(segments, max_segments, diversity_threshold)
+            selected = segments[:max_segments]
 
         # Apply token budget
         selected = self._fit_within_token_budget(selected, self.token_budget)
@@ -481,26 +440,22 @@ class ContextSelector:
     ) -> List[Dict]:
         """
         Select diverse segments avoiding semantic duplicates.
-
-        Uses text similarity to ensure selected segments cover different aspects.
         """
         if not segments:
             return []
 
-        selected = [segments[0]]  # Always take top segment
+        selected = [segments[0]]
 
         for seg in segments[1:]:
             if len(selected) >= target_count:
                 break
 
-            # Check diversity with already selected segments
+            # Check diversity with already selected
             is_diverse = True
             seg_text = seg.get('text_evidence', {}).get('text', '')
 
             for selected_seg in selected:
                 selected_text = selected_seg.get('text_evidence', {}).get('text', '')
-
-                # Simple text overlap similarity
                 similarity = self._calculate_text_similarity(seg_text, selected_text)
 
                 if similarity > diversity_threshold:
@@ -521,27 +476,28 @@ class ContextSelector:
         Select segments that fit within token budget.
         """
         try:
-            import tiktoken
-            encoding = tiktoken.encoding_for_model("gpt-4o-mini")
+            from transformers import AutoTokenizer
+            tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
         except:
-            # Fallback: estimate tokens as words * 1.3
-            encoding = None
+            # Fallback: estimate 4 chars per token
+            def estimate_tokens(text):
+                return len(text) // 4
 
         selected = []
         cumulative_tokens = 0
 
         for seg in segments:
             text_evidence = seg.get('text_evidence', {})
-            if not text_evidence:
+            text = text_evidence.get('text', '') if text_evidence else ''
+
+            if not text:
                 continue
 
-            seg_text = text_evidence.get('text', '')
-
-            # Estimate tokens
-            if encoding:
-                seg_tokens = len(encoding.encode(seg_text))
+            # Count tokens
+            if 'tokenizer' in locals():
+                seg_tokens = len(tokenizer.encode(text))
             else:
-                seg_tokens = int(len(seg_text.split()) * 1.3)
+                seg_tokens = estimate_tokens(text)
 
             if cumulative_tokens + seg_tokens <= max_tokens:
                 selected.append(seg)
@@ -556,9 +512,9 @@ class ContextSelector:
     def _extract_entities(self, text: str) -> Set[str]:
         """Extract medical entities from text"""
         if not self.nlp:
-            # Fallback: simple keyword extraction
-            medical_keywords = set(re.findall(r'\b[a-z]{4,}\b', text.lower()))
-            return medical_keywords
+            # Fallback: extract noun phrases
+            words = re.findall(r'\b[A-Za-z]{4,}\b', text)
+            return set(words[:20])
 
         doc = self.nlp(text)
         entities = set()
@@ -567,7 +523,7 @@ class ContextSelector:
         for ent in doc.ents:
             entities.add(ent.text.lower())
 
-        # Extract noun chunks (medical terms often multi-word)
+        # Extract noun chunks
         for chunk in doc.noun_chunks:
             entities.add(chunk.text.lower())
 
@@ -590,49 +546,34 @@ class ContextSelector:
     def _score_question_alignment(self, query_type: str, segment: Dict) -> float:
         """
         Score how well segment aligns with question type.
-
-        Heuristics:
-        - procedural: Look for step indicators, action verbs
-        - diagnostic: Look for symptoms, assessment terms
-        - factoid: Look for definitions, facts
         """
         text_evidence = segment.get('text_evidence', {})
         if not text_evidence:
-            return 0.5  # Neutral score
+            return 0.0
 
         text = text_evidence.get('text', '').lower()
 
         if query_type == 'procedural':
-            # Look for procedural indicators
-            indicators = ['step', 'first', 'next', 'then', 'procedure', 'perform', 'how to']
-            score = sum(1 for ind in indicators if ind in text) / len(indicators)
-            return min(1.0, score * 2)
+            procedural_keywords = ['step', 'first', 'then', 'next', 'finally', 'procedure', 'method']
+            score = sum(1 for kw in procedural_keywords if kw in text)
+            return min(1.0, score / 3.0)
 
         elif query_type == 'diagnostic':
-            # Look for diagnostic terms
-            indicators = ['symptom', 'diagnose', 'assess', 'evaluate', 'identify', 'sign']
-            score = sum(1 for ind in indicators if ind in text) / len(indicators)
-            return min(1.0, score * 2)
+            diagnostic_keywords = ['symptom', 'sign', 'diagnosis', 'assess', 'evaluate', 'test']
+            score = sum(1 for kw in diagnostic_keywords if kw in text)
+            return min(1.0, score / 3.0)
 
         elif query_type == 'factoid':
-            # Look for definitional content
-            indicators = ['is', 'are', 'defined as', 'means', 'refers to', 'definition']
-            score = sum(1 for ind in indicators if ind in text) / len(indicators)
-            return min(1.0, score * 2)
+            factoid_keywords = ['is', 'are', 'definition', 'means', 'called', 'refers']
+            score = sum(1 for kw in factoid_keywords if kw in text)
+            return min(1.0, score / 3.0)
 
         else:  # general
-            return 0.5  # Neutral score
+            return 0.5
 
     def _compute_nli_scores(self, premise: str, hypothesis: str) -> Dict[str, float]:
         """
         Compute NLI scores (entailment, neutral, contradiction).
-
-        Args:
-            premise: Query (what we want to verify)
-            hypothesis: Segment text (evidence)
-
-        Returns:
-            {'entailment': float, 'neutral': float, 'contradiction': float}
         """
         if not self.nli_model or not self.nli_tokenizer:
             return {'entailment': 0.5, 'neutral': 0.5, 'contradiction': 0.0}
@@ -643,13 +584,10 @@ class ContextSelector:
                 premise,
                 hypothesis,
                 return_tensors='pt',
-                truncation=True,
                 max_length=512,
+                truncation=True,
                 padding=True
-            )
-
-            # Move to device
-            inputs = {k: v.to(self.device) for k, v in inputs.items()}
+            ).to(self.device)
 
             # Get predictions
             with torch.no_grad():
@@ -657,28 +595,21 @@ class ContextSelector:
                 logits = outputs.logits
                 probs = torch.softmax(logits, dim=1)[0]
 
-            # Map to labels (model-dependent, but typically: contradiction, neutral, entailment)
-            # For BiomedNLP-PubMedBERT, check model config
-            scores = {
-                'contradiction': probs[0].item(),
-                'neutral': probs[1].item(),
-                'entailment': probs[2].item()
+            # Map to labels (assuming standard NLI format)
+            return {
+                'entailment': float(probs[0]),
+                'neutral': float(probs[1]),
+                'contradiction': float(probs[2])
             }
 
-            return scores
-
         except Exception as e:
-            print(f"⚠️  NLI scoring failed: {e}")
             return {'entailment': 0.5, 'neutral': 0.5, 'contradiction': 0.0}
 
     def _check_contradiction(self, seg_i: Dict, seg_j: Dict) -> Optional[str]:
         """
         Check if two segments contradict each other.
 
-        Returns conflict type or None:
-        - 'negation': Opposite statements
-        - 'numeric': Conflicting numbers
-        - 'nli_contradiction': NLI detected contradiction
+        Returns conflict type or None.
         """
         text_i = seg_i.get('text_evidence', {}).get('text', '')
         text_j = seg_j.get('text_evidence', {}).get('text', '')
@@ -705,25 +636,22 @@ class ContextSelector:
         """Check for negation conflicts"""
         negation_words = {'not', 'never', 'avoid', "don't", 'do not', 'no', 'cannot', "can't"}
 
-        # Extract key medical actions/terms (simplified)
         words_i = set(re.findall(r'\b[a-z]+\b', text_i.lower()))
         words_j = set(re.findall(r'\b[a-z]+\b', text_j.lower()))
 
-        # Check if one has negation and they share similar content
         has_neg_i = bool(negation_words & words_i)
         has_neg_j = bool(negation_words & words_j)
 
         # XOR: one has negation, other doesn't, but similar words
         if has_neg_i != has_neg_j:
             common_words = (words_i - negation_words) & (words_j - negation_words)
-            if len(common_words) > 5:  # Significant overlap
+            if len(common_words) > 5:
                 return True
 
         return False
 
     def _has_numeric_conflict(self, text_i: str, text_j: str) -> bool:
         """Check for conflicting numeric values"""
-        # Extract numbers with context
         pattern = r'(\d+\.?\d*)\s*([a-z/%]+)?'
 
         nums_i = re.findall(pattern, text_i.lower())
@@ -737,10 +665,7 @@ class ContextSelector:
             for val_j, unit_j in nums_j:
                 if unit_i and unit_j and unit_i == unit_j:
                     try:
-                        diff = abs(float(val_i) - float(val_j))
-                        avg = (float(val_i) + float(val_j)) / 2
-                        # Significant difference (>20%)
-                        if avg > 0 and (diff / avg) > 0.2:
+                        if abs(float(val_i) - float(val_j)) / max(float(val_i), float(val_j)) > 0.2:
                             return True
                     except:
                         pass
@@ -750,13 +675,13 @@ class ContextSelector:
     def _describe_conflict(self, conflict_type: str, seg_i: Dict, seg_j: Dict) -> str:
         """Generate human-readable conflict description"""
         if conflict_type == 'negation':
-            return "Conflicting advice: one segment affirms, another negates"
+            return "Segments contain contradictory statements (negation detected)"
         elif conflict_type == 'numeric':
-            return "Conflicting numerical values for same measurement"
+            return "Segments contain conflicting numeric values"
         elif conflict_type == 'nli_contradiction':
-            return "Logical contradiction detected by NLI model"
+            return "NLI model detected logical contradiction"
         else:
-            return f"Conflict of type: {conflict_type}"
+            return "Unknown conflict type"
 
     def _calculate_text_similarity(self, text1: str, text2: str) -> float:
         """Calculate simple text similarity (Jaccard on words)"""
@@ -770,56 +695,3 @@ class ContextSelector:
         union = len(words1 | words2)
 
         return intersection / union if union > 0 else 0.0
-
-
-# Example usage
-if __name__ == "__main__":
-    import json
-
-    print("ContextSelector Demo")
-    print("=" * 80)
-
-    # Load sample segments
-    try:
-        with open("multimodal_search_results_hybrid.json", "r") as f:
-            data = json.load(f)
-            query = data['query']
-            segments = data['results']
-
-        print(f"Query: {query}")
-        print(f"Input segments: {len(segments)}")
-
-        # Initialize selector
-        selector = ContextSelector(
-            quality_threshold=0.3,
-            token_budget=600,
-            use_nli=True
-        )
-
-        # Curate context
-        result = selector.curate_context(
-            query=query,
-            segments=segments,
-            query_type='general'
-        )
-
-        print(f"\n{'='*80}")
-        print("CURATION RESULTS")
-        print(f"{'='*80}")
-        print(f"Selected segments: {len(result['selected_segments'])}")
-        print(f"Conflicts detected: {len(result['conflicts_detected'])}")
-        print(f"\nStatistics:")
-        for key, value in result['stats'].items():
-            print(f"  {key}: {value}")
-
-        if result['conflicts_detected']:
-            print(f"\n{'='*80}")
-            print("CONFLICTS DETECTED")
-            print(f"{'='*80}")
-            for i, conflict in enumerate(result['conflicts_detected'], 1):
-                print(f"\n{i}. {conflict['description']}")
-                print(f"   Segments: {conflict['segments']}")
-                print(f"   Resolution: {conflict['resolution']}")
-
-    except FileNotFoundError:
-        print("⚠️  Sample file not found. Run query_faiss.py first to generate search results.")

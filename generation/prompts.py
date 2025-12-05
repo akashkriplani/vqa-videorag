@@ -1,12 +1,13 @@
 """
-prompts.py
+generation/prompts.py
+
 Prompt templates for Medical VideoRAG VQA.
 
-Templates optimized for:
-- Cost efficiency (minimal tokens)
-- 150-200 word answers
-- Timestamp citations
-- Medical accuracy
+Features:
+- Question type classification (procedural, diagnostic, factoid, general)
+- Type-specific prompt templates
+- Cost-optimized formatting
+- Timestamp citation support
 """
 
 from typing import List, Dict
@@ -62,7 +63,7 @@ class PromptManager:
         Classify question type using keyword heuristics.
 
         Returns:
-            'factoid', 'procedural', or 'diagnostic'
+            'factoid', 'procedural', 'diagnostic', or 'general'
         """
         query_lower = query.lower()
 
@@ -74,7 +75,7 @@ class PromptManager:
         if any(kw in query_lower for kw in ['diagnose', 'identify', 'assess', 'evaluate', 'symptoms']):
             return 'diagnostic'
 
-        # Factoid questions (what, when, where, which)
+        # Factoid questions
         if any(kw in query_lower for kw in ['what is', 'what are', 'when', 'where', 'which']):
             return 'factoid'
 
@@ -188,7 +189,6 @@ Answer:"""
         return self.system_prompt
 
 
-# Cost-optimized prompt variations for different use cases
 class CostOptimizedPrompts:
     """
     Ultra-minimal prompts for extreme cost optimization.
@@ -215,23 +215,3 @@ Answer in 150 words with timestamps:"""
 {chr(10).join(prompts)}
 
 Answers:"""
-
-
-# Example usage
-if __name__ == "__main__":
-    manager = PromptManager()
-
-    # Test classification
-    test_queries = [
-        "How to perform CPR on an adult?",
-        "What are the symptoms of pneumonia?",
-        "How to assess blood pressure?",
-        "What is the purpose of insulin?"
-    ]
-
-    print("Question Type Classification:")
-    print("=" * 60)
-    for q in test_queries:
-        qtype = manager.classify_question(q)
-        print(f"{qtype:12} | {q}")
-    print("=" * 60)

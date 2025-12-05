@@ -1,45 +1,25 @@
 """
-answer_generation.py
-Answer generation for Medical VideoRAG VQA using GPT-4o-mini.
+generation/answer_generator.py
+
+LLM-based answer generation for Medical VideoRAG VQA.
 
 Features:
-- Cost-optimized prompting (150-200 word answers)
+- Cost-optimized prompting (GPT-4o-mini)
 - Timestamp-aware medical responses
 - Evidence-based answer generation
 - Confidence scoring
-- Adaptive context selection with factual grounding (NEW)
-- Self-reflection attribution (NEW)
+- Integrated context curation and attribution
 """
 
 import os
 import time
+import json
 from typing import List, Dict, Optional
 from openai import OpenAI
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
-
-# Import new modules (optional dependencies)
-try:
-    from context_selector import ContextSelector
-    CONTEXT_SELECTION_AVAILABLE = True
-except ImportError:
-    CONTEXT_SELECTION_AVAILABLE = False
-    print("⚠️  context_selector not available. Install dependencies to enable adaptive context selection.")
-
-try:
-    from attribution import SelfReflectionAttribution
-    ATTRIBUTION_AVAILABLE = True
-except ImportError:
-    ATTRIBUTION_AVAILABLE = False
-    print("⚠️  attribution not available. Install dependencies to enable self-reflection attribution.")
-
-try:
-    from prompts import PromptManager
-    PROMPT_MANAGER_AVAILABLE = True
-except ImportError:
-    PROMPT_MANAGER_AVAILABLE = False
 
 
 class AnswerGenerator:
@@ -49,7 +29,7 @@ class AnswerGenerator:
     Cost optimization:
     - GPT-4o-mini: $0.150/1M input tokens, $0.600/1M output tokens
     - Target: 150-200 word answers (~200 tokens output)
-    - Average cost per query: ~$0.0003 (with retrieval context)
+    - Average cost per query: ~$0.0003
     """
 
     def __init__(
@@ -72,8 +52,8 @@ class AnswerGenerator:
         """
         self.model_name = model_name
         self.client = OpenAI(api_key=api_key or os.getenv("OPENAI_API_KEY"))
-        self.enable_curation = enable_curation and CONTEXT_SELECTION_AVAILABLE
-        self.enable_attribution = enable_attribution and ATTRIBUTION_AVAILABLE
+        self.enable_curation = enable_curation
+        self.enable_attribution = enable_attribution
 
         if not self.client.api_key:
             raise ValueError(
@@ -84,32 +64,33 @@ class AnswerGenerator:
         self.context_selector = None
         if self.enable_curation:
             try:
+                from generation.context_curator import ContextSelector
                 config = curation_config or {}
-                self.context_selector = ContextSelector(
-                    quality_threshold=config.get('quality_threshold', 0.3),
-                    token_budget=config.get('token_budget', 600),
-                    use_nli=config.get('use_nli', True),
-                    device=config.get('device', None)
-                )
-                print("✅ Adaptive context selection enabled")
+                self.context_selector = ContextSelector(**config)
+                print("✅ Context curation enabled")
             except Exception as e:
-                print(f"⚠️  Failed to initialize context selector: {e}")
+                print(f"⚠️  Context curation unavailable: {e}")
                 self.enable_curation = False
 
         # Initialize attribution system
         self.attributor = None
         if self.enable_attribution:
             try:
+                from generation.attribution import SelfReflectionAttribution
                 self.attributor = SelfReflectionAttribution()
                 print("✅ Self-reflection attribution enabled")
             except Exception as e:
-                print(f"⚠️  Failed to initialize attributor: {e}")
+                print(f"⚠️  Attribution unavailable: {e}")
                 self.enable_attribution = False
 
         # Initialize prompt manager
         self.prompt_manager = None
-        if PROMPT_MANAGER_AVAILABLE:
+        try:
+            from generation.prompts import PromptManager
             self.prompt_manager = PromptManager()
+            print("✅ Prompt manager loaded")
+        except Exception as e:
+            print(f"⚠️  Prompt manager unavailable: {e}")
 
     def generate_answer(
         self,
@@ -125,29 +106,30 @@ class AnswerGenerator:
 
         Args:
             query: User question
-            segment_contexts: Retrieved segments from query_faiss (with text_evidence, visual_evidence)
+            segment_contexts: Retrieved segments from query_faiss
             max_tokens: Maximum answer length (default: 250 for ~200 words)
             temperature: Sampling temperature (0.3 for medical accuracy)
-            top_k_evidence: Number of segments to include in context (default: 3)
+            top_k_evidence: Number of segments to include (default: 3)
             query_type: Optional query type override ('procedural', 'diagnostic', 'factoid', 'general')
 
         Returns:
             {
-                'answer': str,                    # Generated answer (150-200 words)
-                'confidence': float,              # Confidence score (0-1)
-                'evidence_segments': List[Dict],  # Evidence with timestamps
+                'answer': str,
+                'confidence': float,
+                'evidence_segments': List[Dict],
                 'model_used': str,
                 'generation_time': float,
-                'cost_estimate': float,           # Estimated API cost in USD
-                'token_usage': Dict,              # Input/output token counts
-                'attribution_map': Optional[Dict], # Self-reflection attribution (if enabled)
-                'curation_stats': Optional[Dict],  # Context curation statistics (if enabled)
-                'conflicts_detected': Optional[List[Dict]]  # Conflicts in evidence (if enabled)
+                'cost_estimate': float,
+                'token_usage': Dict,
+                'attribution_map': Optional[Dict],
+                'curation_stats': Optional[Dict],
+                'conflicts_detected': Optional[List[Dict]],
+                'query_type': str
             }
         """
         start_time = time.time()
 
-        # Step 1: Classify query type (if not provided)
+        # Step 1: Classify query type
         if query_type is None and self.prompt_manager:
             query_type = self.prompt_manager.classify_question(query)
         elif query_type is None:
@@ -160,7 +142,7 @@ class AnswerGenerator:
         print(f"Query type: {query_type}")
         print(f"Input segments: {len(segment_contexts)}")
 
-        # Step 2: Adaptive context selection (if enabled)
+        # Step 2: Adaptive context selection
         curated_segments = segment_contexts
         curation_stats = None
         conflicts_detected = None
@@ -235,10 +217,11 @@ class AnswerGenerator:
                 'token_usage': {'error': str(e)},
                 'attribution_map': None,
                 'curation_stats': curation_stats,
-                'conflicts_detected': conflicts_detected
+                'conflicts_detected': conflicts_detected,
+                'query_type': query_type
             }
 
-        # Step 4: Self-reflection attribution (if enabled)
+        # Step 4: Self-reflection attribution
         attribution_result = None
         if self.enable_attribution and self.attributor:
             print(f"\n🔍 Generating attribution map...")
@@ -252,7 +235,7 @@ class AnswerGenerator:
         # Extract evidence segments with timestamps
         evidence_segments = self._extract_evidence(curated_segments)
 
-        # Estimate confidence based on segment scores (or use attribution confidence)
+        # Estimate confidence
         if attribution_result:
             confidence = attribution_result['overall_confidence']
         else:
@@ -284,29 +267,25 @@ class AnswerGenerator:
         """
         Format prompt for medical VQA with timestamp-aware context.
 
-        Optimized for:
-        - Concise answers (150-200 words)
-        - Timestamp citations
-        - Medical accuracy
-        - Cost efficiency (minimal tokens)
+        Uses PromptManager if available, otherwise default template.
         """
-        # Build evidence context
+        if self.prompt_manager:
+            return self.prompt_manager.format_prompt(query, segments)
+
+        # Fallback: default template
         evidence_parts = []
         for i, seg in enumerate(segments, 1):
             video_id = seg.get('video_id', 'unknown')
             timestamp = seg.get('timestamp', [0, 0])
 
-            # Format timestamp
             if isinstance(timestamp, (list, tuple)) and len(timestamp) == 2:
                 ts_str = f"{self._format_time(timestamp[0])}-{self._format_time(timestamp[1])}"
             else:
                 ts_str = "unknown"
 
-            # Get text evidence
             text_ev = seg.get('text_evidence', {})
             text = text_ev.get('text', '') if text_ev else ''
 
-            # Truncate long text for cost optimization
             if len(text) > 400:
                 text = text[:400] + "..."
 
@@ -317,8 +296,7 @@ class AnswerGenerator:
 
         evidence_context = "\n".join(evidence_parts)
 
-        # Construct optimized prompt
-        prompt = f"""Question: {query}
+        return f"""Question: {query}
 
 Retrieved Video Evidence:
 {evidence_context}
@@ -331,8 +309,6 @@ Instructions:
 5. Use clear medical terminology appropriate for patient education
 
 Answer:"""
-
-        return prompt
 
     def _format_time(self, seconds: float) -> str:
         """Convert seconds to MM:SS format"""
@@ -350,7 +326,7 @@ Answer:"""
             timestamp = seg.get('timestamp', [0, 0])
             combined_score = seg.get('combined_score', 0.0)
 
-            # Get precise timestamp if available (from hierarchical search)
+            # Get precise timestamp if available
             text_ev = seg.get('text_evidence', {})
             if text_ev and text_ev.get('precise_timestamp'):
                 precise_ts = text_ev['precise_timestamp']
@@ -386,7 +362,6 @@ Answer:"""
 
         top_score = segments[0].get('combined_score', 0.0)
 
-        # Normalize score to 0-1 confidence
         if top_score > 0.7:
             return min(0.9, top_score)
         elif top_score > 0.5:
@@ -411,7 +386,7 @@ Answer:"""
         Returns:
             List of answer dictionaries
         """
-        import json
+        assert len(queries) == len(segment_contexts_list), "Queries and contexts must match"
 
         results = []
         total_cost = 0.0
@@ -429,16 +404,14 @@ Answer:"""
 
             total_cost += result['cost_estimate']
 
-            # Progress update
             if i % 10 == 0:
-                print(f"  Progress: {i}/{len(queries)} | Total cost so far: ${total_cost:.4f}")
+                print(f"Progress: {i}/{len(queries)} | Cost so far: ${total_cost:.4f}")
 
         print(f"\n✅ Batch complete!")
         print(f"   Total queries: {len(queries)}")
         print(f"   Total cost: ${total_cost:.4f}")
         print(f"   Average cost per query: ${total_cost/len(queries):.6f}")
 
-        # Save if path provided
         if save_path:
             with open(save_path, 'w') as f:
                 json.dump(results, f, indent=2)
@@ -528,7 +501,6 @@ def format_answer_output(result: Dict, show_attribution: bool = True, show_curat
         output.append("\nClaim-by-Claim Attribution:")
         for i, claim_attr in enumerate(attr['attribution_map'], 1):
             level = claim_attr['support_level']
-
             if level == 'HIGH':
                 indicator = "✅"
             elif level == 'MEDIUM':
@@ -540,49 +512,10 @@ def format_answer_output(result: Dict, show_attribution: bool = True, show_curat
             else:
                 indicator = "❌"
 
-            output.append(f"\n{i}. {indicator} [{level}] {claim_attr['claim']}")
-
+            output.append(f"{i}. {indicator} [{level}] {claim_attr['claim']}")
             if claim_attr.get('evidence_id'):
-                output.append(f"   Evidence: {claim_attr['video_id']} @ {claim_attr['formatted_time']}")
-                if claim_attr.get('exact_quote'):
-                    quote = claim_attr['exact_quote']
-                    if len(quote) > 100:
-                        quote = quote[:97] + "..."
-                    output.append(f"   Quote: \"{quote}\"")
-            else:
-                output.append(f"   ⚠️  No supporting evidence")
+                output.append(f"   📍 {claim_attr['video_id']} @ {claim_attr['formatted_time']}")
 
     output.append("\n" + "=" * 80)
 
     return "\n".join(output)
-
-
-# Example usage
-if __name__ == "__main__":
-    import json
-
-    # Load sample search results
-    with open("multimodal_search_results_hybrid.json", "r") as f:
-        search_results = json.load(f)
-
-    query = search_results['query']
-    segments = search_results['results']
-
-    # Initialize generator
-    generator = AnswerGenerator(model_name="gpt-4o-mini")
-
-    # Generate answer
-    print(f"\nQuery: {query}\n")
-    result = generator.generate_answer(query, segments, top_k_evidence=3)
-
-    # Display result
-    print(format_answer_output(result))
-
-    # Save result
-    with open("answer_generation_demo.json", "w") as f:
-        json.dump({
-            'query': query,
-            **result
-        }, f, indent=2)
-
-    print(f"\n✅ Demo complete! Result saved to answer_generation_demo.json")

@@ -343,20 +343,20 @@ def main():
             print(f"{'='*80}")
 
             try:
-                from answer_generation import AnswerGenerator, format_answer_output
+                from generation import AnswerGenerator, format_answer_output
 
                 # Configure curation settings if enabled
                 curation_config = None
                 if args.enable_curation:
                     curation_config = {
                         'quality_threshold': args.quality_threshold,
-                        'nli_top_k': args.nli_top_k,
-                        'token_budget': args.token_budget
+                        'token_budget': args.token_budget,
+                        'use_nli': True
                     }
                     print(f"\n🔧 Adaptive Context Selection: ENABLED")
                     print(f"   - Quality threshold: {args.quality_threshold}")
-                    print(f"   - NLI top-k: {args.nli_top_k}")
                     print(f"   - Token budget: {args.token_budget}")
+                    print(f"   - NLI scoring: Enabled (top-15 candidates)")
                 else:
                     print(f"\n🔧 Adaptive Context Selection: DISABLED (use --enable_curation to enable)")
 
