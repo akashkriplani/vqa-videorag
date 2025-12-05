@@ -177,3 +177,145 @@ def save_faiss_indices_from_lists(all_text_embs, all_text_meta, all_visual_embs,
         visual_db.save()
 
     print("FAISS indices saved.")
+
+
+def build_indices_from_json_dir(feature_dir: str, output_dir: str, split: str, modality: str = "both"):
+    """
+    Build FAISS indices from JSON feature files.
+
+    Args:
+        feature_dir: Base directory containing textual/ and visual/ subdirectories
+        output_dir: Directory to save FAISS indices
+        split: Dataset split (train/test/val)
+        modality: Which indices to build: "both", "text", or "visual"
+    """
+    import glob
+
+    text_feat_dir = os.path.join(feature_dir, "textual", split)
+    visual_feat_dir = os.path.join(feature_dir, "visual", split)
+
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Build text index if requested
+    if modality in ["both", "text"]:
+        print(f"\n{'='*80}")
+        print(f"BUILDING TEXT INDEX - {split.upper()}")
+        print(f"{'='*80}")
+
+        text_json_files = glob.glob(os.path.join(text_feat_dir, "*.json"))
+        if not text_json_files:
+            print(f"⚠️  No text feature files found in {text_feat_dir}")
+        else:
+            all_text_embs = []
+            all_text_meta = []
+
+            for json_file in text_json_files:
+                with open(json_file, 'r') as f:
+                    data = json.load(f)
+                for item in data:
+                    emb = np.array(item['embedding'])
+                    all_text_embs.append(emb)
+
+                    # Store metadata without embedding
+                    meta = {k: v for k, v in item.items() if k != 'embedding'}
+                    all_text_meta.append(meta)
+
+            if all_text_embs:
+                text_index_path = os.path.join(output_dir, f"textual_{split}.index")
+                first_emb = np.array(all_text_embs[0])
+                dim = int(first_emb.shape[0])
+
+                print(f"Building text index from {len(text_json_files)} JSON files...")
+                print(f"  - Total embeddings: {len(all_text_embs)}")
+                print(f"  - Embedding dimension: {dim}")
+
+                text_db = FaissDB(dim=dim, index_path=text_index_path)
+                text_db.add(all_text_embs, all_text_meta)
+                text_db.save()
+
+                print(f"✅ Text index saved: {text_index_path}")
+                print(f"✅ Metadata saved: {text_index_path}.meta.json")
+
+    # Build visual index if requested
+    if modality in ["both", "visual"]:
+        print(f"\n{'='*80}")
+        print(f"BUILDING VISUAL INDEX - {split.upper()}")
+        print(f"{'='*80}")
+
+        visual_json_files = glob.glob(os.path.join(visual_feat_dir, "*.json"))
+        if not visual_json_files:
+            print(f"⚠️  No visual feature files found in {visual_feat_dir}")
+        else:
+            all_visual_embs = []
+            all_visual_meta = []
+
+            for json_file in visual_json_files:
+                with open(json_file, 'r') as f:
+                    data = json.load(f)
+                for item in data:
+                    emb = np.array(item['embedding'])
+                    all_visual_embs.append(emb)
+
+                    # Store metadata without embedding
+                    meta = {k: v for k, v in item.items() if k != 'embedding'}
+                    all_visual_meta.append(meta)
+
+            if all_visual_embs:
+                visual_index_path = os.path.join(output_dir, f"visual_{split}.index")
+                first_emb = np.array(all_visual_embs[0])
+                dim = int(first_emb.shape[0])
+
+                print(f"Building visual index from {len(visual_json_files)} JSON files...")
+                print(f"  - Total embeddings: {len(all_visual_embs)}")
+                print(f"  - Embedding dimension: {dim}")
+
+                visual_db = FaissDB(dim=dim, index_path=visual_index_path)
+                visual_db.add(all_visual_embs, all_visual_meta)
+                visual_db.save()
+
+                print(f"✅ Visual index saved: {visual_index_path}")
+                print(f"✅ Metadata saved: {visual_index_path}.meta.json")
+
+    print(f"\n{'='*80}")
+    print("INDEX BUILD COMPLETE")
+    print(f"{'='*80}\n")
+
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Build FAISS indices from JSON feature files",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Build both text and visual indices for train split
+  python embedding_storage.py --split train
+
+  # Build only visual index for train split
+  python embedding_storage.py --split train --modality visual
+
+  # Build indices from custom directories
+  python embedding_storage.py --split train --feature_dir my_features/ --output_dir my_indices/
+        """
+    )
+
+    parser.add_argument("--split", type=str, required=True,
+                       choices=["train", "test", "val"],
+                       help="Dataset split to build indices for")
+    parser.add_argument("--feature_dir", type=str, default="feature_extraction",
+                       help="Base directory containing textual/ and visual/ subdirectories (default: feature_extraction)")
+    parser.add_argument("--output_dir", type=str, default="faiss_db",
+                       help="Directory to save FAISS indices (default: faiss_db)")
+    parser.add_argument("--modality", type=str, default="both",
+                       choices=["both", "text", "visual"],
+                       help="Which indices to build: both, text, or visual (default: both)")
+
+    args = parser.parse_args()
+
+    build_indices_from_json_dir(
+        feature_dir=args.feature_dir,
+        output_dir=args.output_dir,
+        split=args.split,
+        modality=args.modality
+    )

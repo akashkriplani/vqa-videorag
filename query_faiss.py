@@ -4,8 +4,8 @@ query_faiss.py
 Load FAISS indices and metadata from `faiss_db/` and run retrieval for a user query.
 
 Features:
-- Embed queries with Bio_ClinicalBERT (text) using CLS token pooling to match training embeddings
-- Embed queries with BiomedCLIP text encoder (open_clip) to search visual FAISS indexes for cross-modal retrieval
+- Embed queries with BiomedCLIP text encoder to match training embeddings
+- Embed queries with BiomedCLIP vision encoder (open_clip) to search visual FAISS indexes for cross-modal retrieval
 - Support for sliding window, chunk overlapping, and hybrid embedding strategies
 - CLI: choose index paths, top_k, and mode (text / visual / both)
 

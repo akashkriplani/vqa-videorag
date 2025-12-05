@@ -88,11 +88,11 @@ class HyperparameterEvaluator:
             # Step 1: ASR (same for all configs)
             transcript_chunks = transcribe_with_asr(self.video_path, asr_model_id="openai/whisper-tiny")
 
-            # Step 2: Text embeddings with current config
-            nlp, bert_tokenizer, bert_model = load_ner_and_embed_models()
+            # Step 2: Text embeddings with current config using BiomedCLIP
+            nlp, clip_model, clip_tokenizer = load_ner_and_embed_models()
 
             text_results = extract_entities_and_embed(
-                transcript_chunks, nlp, bert_tokenizer, bert_model,
+                transcript_chunks, nlp, clip_model, clip_tokenizer,
                 video_id=self.video_id,
                 window_size=config['window_size'],
                 stride=config['stride'],

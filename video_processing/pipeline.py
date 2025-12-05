@@ -26,10 +26,12 @@ class VideoProcessorConfig:
         min_coverage_contribution=0.05,
         deduplication_mode='coverage',
         # Visual embedding config
-        frames_per_segment=2,
-        sampling_strategy='adaptive',
-        quality_filter=False,
-        aggregation_method='mean',
+        frames_per_segment=6,           # Increased from 2 for better coverage
+        sampling_strategy='quality_based',  # Changed from 'adaptive' for better frame selection
+        quality_filter=True,            # Enable quality filtering
+        aggregation_method='max',       # Changed from 'mean' to capture best frame
+        min_frames=3,                   # NEW: Minimum frames for short segments
+        max_frames=12,                  # NEW: Maximum frames for long segments
         # Visual deduplication config
         visual_similarity_threshold=0.98
     ):
@@ -43,10 +45,12 @@ class VideoProcessorConfig:
             deduplication_mode: 'coverage', 'similarity', 'aggressive', or 'none'
 
         Visual embedding hyperparameters:
-            frames_per_segment: Number of frames per segment (default: 2)
-            sampling_strategy: 'uniform', 'adaptive', or 'quality_based'
-            quality_filter: Enable frame quality filtering (default: False)
-            aggregation_method: 'mean' or 'max' (default: 'mean')
+            frames_per_segment: Number of frames per segment (default: 6, optimized for quality)
+            sampling_strategy: 'uniform', 'adaptive', or 'quality_based' (default: 'quality_based')
+            quality_filter: Enable frame quality filtering (default: True)
+            aggregation_method: 'mean' or 'max' (default: 'max' - captures best frame)
+            min_frames: Minimum frames for short segments (default: 3)
+            max_frames: Maximum frames for long segments (default: 12)
             visual_similarity_threshold: Cosine similarity threshold for dedup (default: 0.98)
         """
         # ASR
@@ -63,6 +67,8 @@ class VideoProcessorConfig:
         self.sampling_strategy = sampling_strategy
         self.quality_filter = quality_filter
         self.aggregation_method = aggregation_method
+        self.min_frames = min_frames
+        self.max_frames = max_frames
         self.visual_similarity_threshold = visual_similarity_threshold
 
 
@@ -82,14 +88,14 @@ class VideoProcessor:
         """
         self.config = config or VideoProcessorConfig()
         self.nlp = None
-        self.bert_tokenizer = None
-        self.bert_model = None
+        self.clip_model = None
+        self.clip_tokenizer = None
 
     def _load_models(self):
         """Lazy load NER and embedding models."""
-        if self.bert_tokenizer is None:
-            print("Loading NER and embedding models...")
-            self.nlp, self.bert_tokenizer, self.bert_model = load_ner_and_embed_models()
+        if self.clip_model is None:
+            print("Loading NER and BiomedCLIP embedding models...")
+            self.nlp, self.clip_model, self.clip_tokenizer = load_ner_and_embed_models()
 
     def process_video(self, video_path, video_id, text_feat_dir=None, visual_feat_dir=None,
                      skip_if_exists=True):
@@ -120,12 +126,12 @@ class VideoProcessor:
         transcript_chunks = transcribe_with_asr(video_path, self.config.asr_model_id)
         print(f"✓ Transcription complete: {len(transcript_chunks)} chunks")
 
-        # Step 2: Text Embedding - Generate text embeddings with sliding windows
+        # Step 2: Text Embedding - Generate text embeddings with sliding windows using BiomedCLIP
         print(f"\n[2/4] Generating text embeddings for {video_id}...")
         self._load_models()
 
         text_results = extract_entities_and_embed(
-            transcript_chunks, self.nlp, self.bert_tokenizer, self.bert_model,
+            transcript_chunks, self.nlp, self.clip_model, self.clip_tokenizer,
             video_id=video_id,
             window_size=self.config.window_size,
             stride=self.config.stride,
@@ -145,7 +151,9 @@ class VideoProcessor:
             frames_per_segment=self.config.frames_per_segment,
             sampling_strategy=self.config.sampling_strategy,
             quality_filter=self.config.quality_filter,
-            aggregation_method=self.config.aggregation_method
+            aggregation_method=self.config.aggregation_method,
+            min_frames=self.config.min_frames,
+            max_frames=self.config.max_frames
         )
         print(f"✓ Visual embeddings: {len(visual_results)} segments")
 

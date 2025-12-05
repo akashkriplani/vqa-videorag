@@ -2,8 +2,8 @@
 multimodal_pipeline.py
 Modular pipeline for multimodal medical video processing:
 - ASR (openai/whisper-tiny)
-- Entity recognition & text embeddings (BioBERT/ClinicalBERT, SciSpacy/HF NER)
-- Frame extraction & visual embeddings (BiomedCLIP)
+- Entity recognition & text embeddings (BiomedCLIP Text encoder, SciSpacy/HF NER)
+- Frame extraction & visual embeddings (BiomedCLIP Vision encoder)
 - FAISS DB integration
 - Demo pipeline
 """
@@ -240,51 +240,35 @@ def demo_pipeline(video_path, text_feat_dir, visual_feat_dir, faiss_text_path, f
     # Query demo with multimodal search (matching query_faiss.py output format)
     query = "How to do a mouth cancer check at home?"
 
-    # Generate query embeddings for both text and visual modalities
-    bert_tokenizer = AutoTokenizer.from_pretrained("emilyalsentzer/Bio_ClinicalBERT")
-    bert_model = AutoModel.from_pretrained("emilyalsentzer/Bio_ClinicalBERT")
-
-    inputs = bert_tokenizer(query, return_tensors="pt", truncation=True, padding=True, max_length=512)
-    with torch.no_grad():
-        outputs = bert_model(**inputs)
-        # Use CLS token pooling for consistency with embedding generation
-        query_emb_text = outputs.last_hidden_state[:, 0, :].squeeze().cpu().numpy()
-
-    # Normalize text embedding for FAISS search
-    norm = np.linalg.norm(query_emb_text)
-    if norm > 0:
-        query_emb_text = query_emb_text / norm
-
-    # For visual search, we need BiomedCLIP text encoder
-    # Load BiomedCLIP for cross-modal text->visual search
-    print("Loading BiomedCLIP for cross-modal search...")
+    # Load BiomedCLIP for unified text+visual search with embedding space alignment
+    print("Loading BiomedCLIP for unified embedding space search...")
     clip_model, _, _ = open_clip.create_model_and_transforms(
         'hf-hub:microsoft/BiomedCLIP-PubMedBERT_256-vit_base_patch16_224',
         pretrained=True
     )
     clip_model.eval()
 
-    # Tokenize with proper context length for BiomedCLIP
+    # Tokenize with BiomedCLIP tokenizer
     tokenizer = open_clip.get_tokenizer('hf-hub:microsoft/BiomedCLIP-PubMedBERT_256-vit_base_patch16_224')
     tokens = tokenizer([query])
     with torch.no_grad():
-        query_emb_visual = clip_model.encode_text(tokens).squeeze().cpu().numpy()
+        query_emb = clip_model.encode_text(tokens).squeeze().cpu().numpy()
 
-    # Normalize visual embedding
-    norm = np.linalg.norm(query_emb_visual)
+    # Normalize embedding for both text and visual search (same embedding space)
+    norm = np.linalg.norm(query_emb)
     if norm > 0:
-        query_emb_visual = query_emb_visual / norm
+        query_emb = query_emb / norm
 
     print(f"\n{'='*80}")
     print(f"DEMO QUERY: {query}")
     print(f"{'='*80}")
 
-    # Perform multimodal search
+    # Perform multimodal search (using same query embedding for both since embeddings are aligned)
     print("\n[1] Searching textual index...")
-    text_search_results = text_db.search(query_emb_text, top_k=50)  # Get more for hybrid search
+    text_search_results = text_db.search(query_emb, top_k=50)  # Get more for hybrid search
 
     print("[2] Searching visual index...")
-    visual_search_results = visual_db.search(query_emb_visual, top_k=10)
+    visual_search_results = visual_db.search(query_emb, top_k=10)
 
     print(f"\nFound {len(text_search_results)} text results and {len(visual_search_results)} visual results")
 

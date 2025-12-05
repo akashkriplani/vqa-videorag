@@ -1,8 +1,6 @@
 {
   "query": "How to do a mouth cancer check at home?",
-  "total_segments": 3,
-  "aggregation_mode": "segment",
-  "results": [
+  "search_results": [
     {
       "video_id": "_6csIJAWj_s",
       "segment_id": "_6csIJAWj_s_seg_1",
@@ -93,7 +91,12 @@
       "weights_used": {
         "text": 0.85,
         "visual": 0.15
-      }
+      },
+      "relevance_score": 0.5532286920347199,
+      "nli_entailment": 0.5,
+      "nli_neutral": 0.5,
+      "nli_contradiction": 0.0,
+      "final_score": 0.537260084424304
     },
     {
       "video_id": "_6csIJAWj_s",
@@ -201,7 +204,12 @@
       "weights_used": {
         "text": 0.85,
         "visual": 0.15
-      }
+      },
+      "relevance_score": 0.5132105208865663,
+      "nli_entailment": 0.5,
+      "nli_neutral": 0.5,
+      "nli_contradiction": 0.0,
+      "final_score": 0.5092473646205964
     },
     {
       "video_id": "bTn89EBKJdM",
@@ -305,7 +313,76 @@
       "weights_used": {
         "text": 0.85,
         "visual": 0.15
-      }
+      },
+      "relevance_score": 0.25822268584568786,
+      "nli_entailment": 0.5,
+      "nli_neutral": 0.5,
+      "nli_contradiction": 0.0,
+      "final_score": 0.3307558800919815
     }
-  ]
+  ],
+  "generated_answer": {
+    "answer": "To perform a mouth cancer check at home, follow these simple steps that take about 45 seconds. \n\n1. **Initial Observation**: Start by looking at your mouth in a well-lit area. Check for any unusual red or white patches on your gums, tongue, or inside your cheeks. If everything looks clear, proceed to the next step [Video 1: _6csIJAWj_s, Time: 01:37-01:41].\n\n2. **Check the Roof of Your Mouth**: Tilt your head back slightly to get a better view. Use your finger to gently feel along the roof of your mouth for any lumps or irregularities. This area can be tricky to inspect, so take your time [Video 1].\n\n3. **Inspect Your Lips**: Use your thumb and index finger to pull your lips away from your gums. Look for any unusual signs or changes in color or texture. \n\nRemember, if you notice any concerning changes, such as persistent lumps or sores that do not heal, consult a healthcare professional promptly. Regular checks can be crucial, as early detection can significantly impact outcomes [Video 1].",
+    "confidence": 0.5795578378348984,
+    "evidence_segments": [
+      {
+        "video_id": "_6csIJAWj_s",
+        "segment_id": "_6csIJAWj_s_seg_0",
+        "timestamp": [
+          42.32,
+          47.2
+        ],
+        "precise_timestamp": [
+          42.32,
+          47.2
+        ],
+        "relevance_score": 0.5795578378348984,
+        "formatted_time": "00:42-00:47"
+      },
+      {
+        "video_id": "_6csIJAWj_s",
+        "segment_id": "_6csIJAWj_s_seg_1",
+        "timestamp": [
+          97.04,
+          101.04
+        ],
+        "precise_timestamp": [
+          97.04,
+          101.04
+        ],
+        "relevance_score": 0.6457428994354751,
+        "formatted_time": "01:37-01:41"
+      }
+    ],
+    "model_used": "gpt-4o-mini",
+    "generation_time": 9.122889041900635,
+    "cost_estimate": 0.00020595,
+    "token_usage": {
+      "input_tokens": 449,
+      "output_tokens": 231,
+      "total_tokens": 680
+    },
+    "attribution_map": null,
+    "curation_stats": {
+      "input_segments": 3,
+      "after_quality_filter": 3,
+      "after_relevance_scoring": 3,
+      "after_nli_scoring": 3,
+      "after_contradiction_detection": 2,
+      "final_selected": 2,
+      "conflicts_found": 1
+    },
+    "conflicts_detected": [
+      {
+        "type": "numeric",
+        "segments": [
+          "_6csIJAWj_s_seg_0",
+          "bTn89EBKJdM_seg_0"
+        ],
+        "description": "Segments contain conflicting numeric values",
+        "resolution": "Removed lower-scored segment"
+      }
+    ],
+    "query_type": "procedural"
+  }
 }

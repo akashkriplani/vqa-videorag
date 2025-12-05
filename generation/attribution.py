@@ -189,7 +189,25 @@ class SelfReflectionAttribution:
                 'conflict_warning': None
             }
 
-        # Find best matching segment
+        # Check for explicit evidence references (e.g., "Evidence 1", "[Evidence 2]")
+        evidence_ref_match = re.search(r'\[?Evidence\s+(\d+)\]?', claim, re.IGNORECASE)
+        if evidence_ref_match:
+            evidence_num = int(evidence_ref_match.group(1))
+            # Evidence numbers are 1-indexed
+            if 1 <= evidence_num <= len(evidence_segments):
+                seg = evidence_segments[evidence_num - 1]
+                text_evidence = seg.get('text_evidence', {})
+                seg_text = text_evidence.get('text', '') if text_evidence else ''
+
+                return self._format_attribution(
+                    claim=claim,
+                    segment=seg,
+                    quote=self._extract_quote(claim, seg_text) if seg_text else None,
+                    similarity=1.0,  # Explicit reference = high confidence
+                    support_level='HIGH'
+                )
+
+        # Find best matching segment by semantic similarity
         best_match = None
         best_similarity = 0.0
         best_quote = None
@@ -211,28 +229,14 @@ class SelfReflectionAttribution:
                 best_match = seg
                 best_quote = self._extract_quote(claim, seg_text)
 
-        # Assess support level
-        support_level = self._assess_support_level(claim, best_match, best_similarity)
-
         # Format result
         if best_match:
-            timestamp = best_match.get('timestamp')
-            if isinstance(timestamp, (list, tuple)) and len(timestamp) == 2:
-                formatted_time = self._format_timestamp(timestamp)
-            else:
-                formatted_time = "unknown"
-
-            return {
-                'claim': claim,
-                'support_level': support_level,
-                'evidence_id': best_match.get('segment_id'),
-                'video_id': best_match.get('video_id'),
-                'timestamp': timestamp,
-                'formatted_time': formatted_time,
-                'exact_quote': best_quote,
-                'similarity_score': best_similarity,
-                'conflict_warning': None
-            }
+            return self._format_attribution(
+                claim=claim,
+                segment=best_match,
+                quote=best_quote,
+                similarity=best_similarity
+            )
         else:
             return {
                 'claim': claim,
@@ -402,6 +406,42 @@ class SelfReflectionAttribution:
             'conflicted_claims': support_counts['CONFLICTED'],
             'claim_count': total_claims,
             'support_breakdown': support_counts
+        }
+
+    def _format_attribution(
+        self,
+        claim: str,
+        segment: Dict,
+        quote: Optional[str],
+        similarity: float,
+        support_level: Optional[str] = None
+    ) -> Dict:
+        """Format attribution result consistently."""
+        if support_level is None:
+            support_level = self._assess_support_level(claim, segment, similarity)
+
+        # Get precise timestamp if available
+        text_evidence = segment.get('text_evidence', {})
+        if text_evidence and text_evidence.get('precise_timestamp'):
+            timestamp = text_evidence['precise_timestamp']
+        else:
+            timestamp = segment.get('timestamp')
+
+        if isinstance(timestamp, (list, tuple)) and len(timestamp) == 2:
+            formatted_time = self._format_timestamp(timestamp)
+        else:
+            formatted_time = "unknown"
+
+        return {
+            'claim': claim,
+            'support_level': support_level,
+            'evidence_id': segment.get('segment_id'),
+            'video_id': segment.get('video_id'),
+            'timestamp': timestamp,
+            'formatted_time': formatted_time,
+            'exact_quote': quote,
+            'similarity_score': similarity,
+            'conflict_warning': None
         }
 
     def _format_timestamp(self, timestamp: List[float]) -> str:

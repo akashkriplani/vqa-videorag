@@ -72,9 +72,9 @@ class EmbeddingModels:
     """
     Embedding models for query encoding.
 
-    Supports:
-    - Bio_ClinicalBERT for text queries (matches text embeddings)
-    - BiomedCLIP for cross-modal text->visual queries
+    Uses BiomedCLIP text encoder for both text and visual queries to ensure
+    embedding space alignment. BiomedCLIP's text and vision encoders are trained
+    together, enabling true cross-modal retrieval.
     """
 
     def __init__(
@@ -83,7 +83,7 @@ class EmbeddingModels:
         biomedclip_model_id="hf-hub:microsoft/BiomedCLIP-PubMedBERT_256-vit_base_patch16_224"
     ):
         """
-        Initialize embedding models.
+        Initialize embedding models with BiomedCLIP for unified embedding space.
 
         Args:
             device: torch device (auto-detected if None)
@@ -98,12 +98,7 @@ class EmbeddingModels:
                 device = torch.device("cpu")
         self.device = device
 
-        # Load Bio Clinical BERT for textual embeddings
-        self.bio_tokenizer = AutoTokenizer.from_pretrained("emilyalsentzer/Bio_ClinicalBERT")
-        self.bio_model = AutoModel.from_pretrained("emilyalsentzer/Bio_ClinicalBERT").to(self.device)
-        self.bio_model.eval()
-
-        # Load BiomedCLIP (open_clip) for cross-modal text->visual matching
+        # Load BiomedCLIP for unified text+visual embedding space
         self.clip_model, _, _ = open_clip.create_model_and_transforms(
             biomedclip_model_id,
             pretrained=True
@@ -111,33 +106,27 @@ class EmbeddingModels:
         self.clip_model = self.clip_model.to(self.device)
         self.clip_model.eval()
 
-    def embed_text_bio(self, text, max_length=512):
-        """
-        Generate text embedding using Bio_ClinicalBERT with CLS token pooling.
+        # Store tokenizer for text encoding
+        self.clip_tokenizer = open_clip.get_tokenizer(biomedclip_model_id)
 
-        This matches the embedding generation strategy in the video processing pipeline.
+    def embed_text_bio(self, text, max_length=77):
+        """
+        Generate text embedding using BiomedCLIP text encoder.
+
+        This ensures embedding space alignment with both text and visual embeddings
+        generated during the video processing pipeline.
 
         Args:
             text: Input text query
-            max_length: Maximum sequence length (default 512 to match training)
+            max_length: Maximum sequence length (default 77, CLIP's standard)
 
         Returns:
             Normalized numpy array of shape (embedding_dim,)
         """
-        inputs = self.bio_tokenizer(
-            text,
-            return_tensors="pt",
-            truncation=True,
-            max_length=max_length,
-            padding=True
-        )
-        # Move tensors to device
-        inputs = {k: v.to(self.device) for k, v in inputs.items()}
+        tokens = self.clip_tokenizer([text]).to(self.device)
 
         with torch.no_grad():
-            outputs = self.bio_model(**inputs)
-            # Use CLS token pooling (position 0) to match training embeddings
-            emb = outputs.last_hidden_state[:, 0, :].squeeze()
+            emb = self.clip_model.encode_text(tokens).squeeze(0)
 
         # Normalize embedding to match FAISS index normalization
         vec = emb.cpu().numpy().astype(np.float32)
@@ -150,19 +139,13 @@ class EmbeddingModels:
         """
         Generate text embedding using BiomedCLIP for cross-modal retrieval.
 
+        Note: This is now identical to embed_text_bio() since we use BiomedCLIP
+        for all text embeddings. Kept for backward compatibility.
+
         Args:
             text: Input text query
 
         Returns:
             Normalized numpy array of shape (embedding_dim,)
         """
-        tokens = open_clip.tokenize([text]).to(self.device)
-        with torch.no_grad():
-            emb = self.clip_model.encode_text(tokens).squeeze(0)
-
-        # Normalize embedding to match FAISS index normalization
-        vec = emb.cpu().numpy().astype(np.float32)
-        norm = np.linalg.norm(vec)
-        if norm > 0:
-            vec = vec / norm
-        return vec
+        return self.embed_text_bio(text)

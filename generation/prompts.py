@@ -90,6 +90,13 @@ class PromptManager:
             video_id = seg.get('video_id', 'unknown')
             timestamp = seg.get('timestamp', [0, 0])
 
+            # Get precise timestamp if available
+            text_ev = seg.get('text_evidence', {})
+            if text_ev and text_ev.get('precise_timestamp'):
+                precise_ts = text_ev['precise_timestamp']
+                if isinstance(precise_ts, (list, tuple)) and len(precise_ts) == 2:
+                    timestamp = precise_ts
+
             # Format timestamp
             if isinstance(timestamp, (list, tuple)) and len(timestamp) == 2:
                 start_mm = int(timestamp[0] // 60)
@@ -101,7 +108,6 @@ class PromptManager:
                 ts_str = "unknown"
 
             # Get text evidence
-            text_ev = seg.get('text_evidence', {})
             text = text_ev.get('text', '') if text_ev else ''
 
             # Truncate for cost optimization
@@ -109,8 +115,8 @@ class PromptManager:
                 text = text[:350] + "..."
 
             evidence_parts.append(
-                f"[Segment {i}] Video: {video_id} | Time: {ts_str}\n"
-                f"{text}"
+                f"[Video {i}: {video_id}, Time: {ts_str}]\n"
+                f"Content: {text}"
             )
 
         return "\n\n".join(evidence_parts)
@@ -126,9 +132,10 @@ Video Evidence:
 
 Instructions:
 1. Provide a direct, concise answer (100-150 words)
-2. Include key definition or fact
-3. Reference timestamps [MM:SS-MM:SS] for evidence
+2. Include key definition or fact from the evidence
+3. Cite using format: [Video 1: video_id, Time: MM:SS-MM:SS] or just [Video 1]
 4. Use clear medical terminology
+5. Only use information from the provided evidence
 
 Answer:"""
 
@@ -143,9 +150,10 @@ Video Evidence:
 
 Instructions:
 1. Provide step-by-step procedural answer (150-200 words)
-2. List key steps with timestamps [MM:SS-MM:SS]
-3. Use format: "Step 1 [timestamp]: description"
-4. Include important safety notes or considerations
+2. Cite using format: [Video 1: video_id, Time: MM:SS-MM:SS] or just [Video 1]
+3. Reference specific evidence when describing steps
+4. Include important safety notes or considerations from the evidence
+5. Only use information present in the provided evidence
 
 Answer:"""
 
@@ -160,9 +168,10 @@ Video Evidence:
 
 Instructions:
 1. Provide diagnostic guidance (150-200 words)
-2. List key assessment criteria with timestamps
-3. Include what to look for and warning signs
-4. Reference evidence with [MM:SS-MM:SS] timestamps
+2. List key assessment criteria, citing evidence using format: [Video 1: video_id, Time: MM:SS-MM:SS] or [Video 1]
+3. Include what to look for and warning signs from the evidence
+4. Only use information from the provided evidence
+5. Use clear medical terminology
 
 Answer:"""
 
@@ -177,10 +186,11 @@ Video Evidence:
 
 Instructions:
 1. Answer the medical question accurately (150-200 words)
-2. Use evidence from video segments provided
-3. Reference timestamps using [MM:SS-MM:SS] format
+2. Use ONLY evidence from video segments provided
+3. Cite using format: [Video 1: video_id, Time: MM:SS-MM:SS] or just [Video 1]
 4. Structure: direct answer → supporting details → brief summary
 5. Use medical terminology appropriate for patient education
+6. If evidence doesn't fully answer the question, acknowledge what's covered
 
 Answer:"""
 

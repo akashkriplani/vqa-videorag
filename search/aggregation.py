@@ -226,17 +226,37 @@ def aggregate_results_by_segment(
 
         if has_text and has_visual:
             # Both modalities available: weighted combination
-            ctx["combined_score"] = (text_weight * ctx["text_score"] +
-                                    visual_weight * ctx["visual_score"])
+            # ADAPTIVE FUSION: If visual score is low (< 0.4), automatically
+            # increase text weight to prevent weak visual signal from hurting results
+            adaptive_text_weight = text_weight
+            adaptive_visual_weight = visual_weight
+
+            if ctx["visual_score"] < 0.4:
+                # Visual signal is weak → rely more on text
+                adaptive_text_weight = 0.85
+                adaptive_visual_weight = 0.15
+                ctx["fusion_mode"] = "adaptive_text_heavy"
+            else:
+                ctx["fusion_mode"] = "balanced"
+
+            ctx["combined_score"] = (adaptive_text_weight * ctx["text_score"] +
+                                    adaptive_visual_weight * ctx["visual_score"])
+            ctx["weights_used"] = {
+                "text": adaptive_text_weight,
+                "visual": adaptive_visual_weight
+            }
             ctx["has_both_modalities"] = True
         elif has_text:
             # Only text available
             ctx["combined_score"] = ctx["text_score"]
+            ctx["fusion_mode"] = "text_only"
         elif has_visual:
             # Only visual available
             ctx["combined_score"] = ctx["visual_score"]
+            ctx["fusion_mode"] = "visual_only"
         else:
             ctx["combined_score"] = 0.0
+            ctx["fusion_mode"] = "no_evidence"
 
     # Sort by combined score and return top-k
     sorted_segments = sorted(

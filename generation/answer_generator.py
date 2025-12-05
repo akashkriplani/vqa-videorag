@@ -14,12 +14,30 @@ Features:
 import os
 import time
 import json
+import numpy as np
 from typing import List, Dict, Optional
 from openai import OpenAI
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
+
+
+def _convert_to_serializable(obj):
+    """Convert NumPy types to native Python types for JSON serialization."""
+    if isinstance(obj, (np.integer, np.int64, np.int32)):
+        return int(obj)
+    elif isinstance(obj, (np.floating, np.float64, np.float32)):
+        return float(obj)
+    elif isinstance(obj, (np.bool_, bool)):
+        return bool(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, dict):
+        return {key: _convert_to_serializable(value) for key, value in obj.items()}
+    elif isinstance(obj, (list, tuple)):
+        return [_convert_to_serializable(item) for item in obj]
+    return obj
 
 
 class AnswerGenerator:
@@ -168,6 +186,30 @@ class AnswerGenerator:
             curated_segments = segment_contexts[:top_k_evidence]
             print(f"Using top-{top_k_evidence} segments (curation disabled)")
 
+        # Assess retrieval quality before generation
+        quality_check = self._assess_retrieval_quality(curated_segments, query)
+
+        if not quality_check['sufficient']:
+            print(f"\n⚠️  WARNING: Low retrieval quality detected!")
+            print(f"   Max similarity: {quality_check['max_similarity']:.3f}")
+            print(f"   Recommendation: {quality_check['message']}")
+
+            # Return a refusal message instead of hallucinating
+            return _convert_to_serializable({
+                'answer': quality_check['message'],
+                'confidence': 0.0,
+                'evidence_segments': self._extract_evidence(curated_segments),
+                'model_used': self.model_name,
+                'generation_time': float(time.time() - start_time),
+                'cost_estimate': 0.0,
+                'token_usage': {'refused': True},
+                'attribution_map': None,
+                'curation_stats': curation_stats,
+                'conflicts_detected': conflicts_detected,
+                'query_type': query_type,
+                'quality_check': quality_check
+            })
+
         # Format prompt with evidence
         prompt = self._format_medical_prompt(query, curated_segments)
 
@@ -181,7 +223,13 @@ class AnswerGenerator:
                         "role": "system",
                         "content": (
                             "You are a medical AI assistant specializing in medical video education. "
-                            "Provide accurate, concise answers (150-200 words) with timestamp references."
+                            "Provide accurate, concise answers (150-200 words) citing evidence with video IDs and timestamps.\n\n"
+                            "CITATION FORMAT: Use [Video 1: video_id, Time: MM:SS-MM:SS] or just [Video 1] when referencing evidence.\n\n"
+                            "CRITICAL: You must ONLY use information from the provided video evidence. "
+                            "If the evidence does not contain relevant information to answer the query, "
+                            "respond with: 'The provided video evidence does not contain information about [topic]. "
+                            "The available videos cover different medical topics.'\n\n"
+                            "DO NOT use your general medical knowledge if the evidence is irrelevant."
                         )
                     },
                     {"role": "user", "content": prompt}
@@ -203,23 +251,26 @@ class AnswerGenerator:
                 token_usage['output_tokens'] * 0.600 / 1_000_000
             )
 
+            # Post-process: inject timestamps for evidence citations
+            answer_text = self._inject_timestamps(answer_text, curated_segments)
+
             print(f"✅ Answer generated ({token_usage['output_tokens']} tokens, ${cost_estimate:.6f})")
 
         except Exception as e:
             print(f"❌ Answer generation failed: {e}")
-            return {
+            return _convert_to_serializable({
                 'answer': f"Error generating answer: {str(e)}",
                 'confidence': 0.0,
                 'evidence_segments': [],
                 'model_used': self.model_name,
-                'generation_time': time.time() - start_time,
+                'generation_time': float(time.time() - start_time),
                 'cost_estimate': 0.0,
                 'token_usage': {'error': str(e)},
                 'attribution_map': None,
                 'curation_stats': curation_stats,
                 'conflicts_detected': conflicts_detected,
                 'query_type': query_type
-            }
+            })
 
         # Step 4: Self-reflection attribution
         attribution_result = None
@@ -249,19 +300,19 @@ class AnswerGenerator:
         print(f"Final confidence: {confidence:.2%}")
         print(f"{'='*80}\n")
 
-        return {
+        return _convert_to_serializable({
             'answer': answer_text,
-            'confidence': confidence,
+            'confidence': float(confidence),
             'evidence_segments': evidence_segments,
             'model_used': self.model_name,
-            'generation_time': generation_time,
-            'cost_estimate': cost_estimate,
+            'generation_time': float(generation_time),
+            'cost_estimate': float(cost_estimate),
             'token_usage': token_usage,
             'attribution_map': attribution_result,
             'curation_stats': curation_stats,
             'conflicts_detected': conflicts_detected,
             'query_type': query_type
-        }
+        })
 
     def _format_medical_prompt(self, query: str, segments: List[Dict]) -> str:
         """
@@ -278,19 +329,26 @@ class AnswerGenerator:
             video_id = seg.get('video_id', 'unknown')
             timestamp = seg.get('timestamp', [0, 0])
 
-            if isinstance(timestamp, (list, tuple)) and len(timestamp) == 2:
+            # Get precise timestamp if available
+            text_ev = seg.get('text_evidence', {})
+            if text_ev and text_ev.get('precise_timestamp'):
+                precise_ts = text_ev['precise_timestamp']
+                if isinstance(precise_ts, (list, tuple)) and len(precise_ts) == 2:
+                    ts_str = f"{self._format_time(precise_ts[0])}-{self._format_time(precise_ts[1])}"
+                else:
+                    ts_str = f"{self._format_time(timestamp[0])}-{self._format_time(timestamp[1])}"
+            elif isinstance(timestamp, (list, tuple)) and len(timestamp) == 2:
                 ts_str = f"{self._format_time(timestamp[0])}-{self._format_time(timestamp[1])}"
             else:
                 ts_str = "unknown"
 
-            text_ev = seg.get('text_evidence', {})
             text = text_ev.get('text', '') if text_ev else ''
 
             if len(text) > 400:
                 text = text[:400] + "..."
 
             evidence_parts.append(
-                f"[Segment {i}] Video: {video_id} | Time: {ts_str}\n"
+                f"[Video {i}: {video_id}, Time: {ts_str}]\n"
                 f"Content: {text}\n"
             )
 
@@ -303,10 +361,11 @@ Retrieved Video Evidence:
 
 Instructions:
 1. Answer the medical question accurately and concisely (150-200 words)
-2. Reference specific timestamps using format [MM:SS-MM:SS]
-3. Use evidence from the video transcripts provided
-4. Structure answer as: direct answer, key steps/points with timestamps, brief summary
-5. Use clear medical terminology appropriate for patient education
+2. Cite evidence using format: [Video 1: video_id, Time: MM:SS-MM:SS] or just [Video 1]
+3. When referencing specific information, cite the video number (e.g., "As shown in [Video 1]")
+4. Use ONLY information from the provided evidence transcripts
+5. If the evidence doesn't fully answer the question, acknowledge what's covered and what's not
+6. Use clear medical terminology appropriate for patient education
 
 Answer:"""
 
@@ -315,6 +374,205 @@ Answer:"""
         minutes = int(seconds // 60)
         secs = int(seconds % 60)
         return f"{minutes:02d}:{secs:02d}"
+
+    def _assess_retrieval_quality(
+        self,
+        segments: List[Dict],
+        query: str,
+        min_similarity_threshold: float = 0.62,
+        min_avg_similarity: float = 0.50
+    ) -> Dict:
+        """
+        Assess whether retrieved segments are relevant enough to answer the query.
+
+        Prevents hallucination by detecting when retrieval has failed.
+
+        Args:
+            segments: Retrieved segments
+            query: User query
+            min_similarity_threshold: Minimum required top similarity (default: 0.62 - adjusted for BiomedCLIP limitations)
+            min_avg_similarity: Minimum required average similarity (default: 0.50)
+
+        Returns:
+            {
+                'sufficient': bool,
+                'max_similarity': float,
+                'avg_similarity': float,
+                'message': str,
+                'segment_count': int
+            }
+        """
+        if not segments:
+            return {
+                'sufficient': False,
+                'max_similarity': 0.0,
+                'avg_similarity': 0.0,
+                'message': 'No relevant video evidence found in the database for this query. The video collection may not cover this topic.',
+                'segment_count': 0
+            }
+
+        # Extract similarity scores
+        similarities = []
+        for seg in segments:
+            # Prioritize combined_score (has adaptive fusion) over final_score
+            score = seg.get('combined_score') or seg.get('final_score') or seg.get('text_score') or 0.0
+            similarities.append(score)
+
+        max_sim = max(similarities) if similarities else 0.0
+        avg_sim = sum(similarities) / len(similarities) if similarities else 0.0
+
+        # Quality checks
+        sufficient = max_sim >= min_similarity_threshold and avg_sim >= min_avg_similarity
+
+        if not sufficient:
+            if max_sim < 0.5:
+                reason = f"The retrieved segments have very low relevance (max: {max_sim:.2f}). This query may be outside the scope of the video database."
+            elif max_sim < min_similarity_threshold:
+                reason = f"The retrieved segments have moderate relevance (max: {max_sim:.2f}) but may not provide sufficient detail to answer accurately."
+            else:
+                reason = f"The average quality of retrieved segments is low (avg: {avg_sim:.2f}). Multiple segments needed but quality is insufficient."
+
+            message = (
+                f"Unable to provide a reliable answer based on available video evidence. "
+                f"{reason}\n\n"
+                f"Suggestion: Try queries about physical therapy, injury treatment, or medical procedures "
+                f"that are within the scope of the video collection."
+            )
+        else:
+            message = "Sufficient evidence available"
+
+        return {
+            'sufficient': bool(sufficient),
+            'max_similarity': float(max_sim),
+            'avg_similarity': float(avg_sim),
+            'message': message,
+            'segment_count': int(len(segments))
+        }
+
+    def _assess_retrieval_quality(
+        self,
+        segments: List[Dict],
+        query: str,
+        min_similarity_threshold: float = 0.62,
+        min_avg_similarity: float = 0.50
+    ) -> Dict:
+        """
+        Assess whether retrieved segments are relevant enough to answer the query.
+
+        Prevents hallucination by detecting when retrieval has failed.
+
+        Args:
+            segments: Retrieved segments
+            query: User query
+            min_similarity_threshold: Minimum required top similarity (default: 0.62 - adjusted for BiomedCLIP limitations)
+            min_avg_similarity: Minimum required average similarity (default: 0.50)
+
+        Returns:
+            {
+                'sufficient': bool,
+                'max_similarity': float,
+                'avg_similarity': float,
+                'message': str,
+                'segment_count': int
+            }
+        """
+        if not segments:
+            return {
+                'sufficient': False,
+                'max_similarity': 0.0,
+                'avg_similarity': 0.0,
+                'message': 'No relevant video evidence found in the database for this query. The video collection may not cover this topic.',
+                'segment_count': 0
+            }
+
+        # Extract similarity scores
+        similarities = []
+        for seg in segments:
+            # Prioritize combined_score (has adaptive fusion) over final_score
+            score = seg.get('combined_score') or seg.get('final_score') or seg.get('text_score') or 0.0
+            similarities.append(score)
+
+        max_sim = max(similarities) if similarities else 0.0
+        avg_sim = sum(similarities) / len(similarities) if similarities else 0.0
+
+        # Quality checks
+        sufficient = max_sim >= min_similarity_threshold and avg_sim >= min_avg_similarity
+
+        if not sufficient:
+            if max_sim < 0.5:
+                reason = f"The retrieved segments have very low relevance (max: {max_sim:.2f}). This query may be outside the scope of the video database."
+            elif max_sim < min_similarity_threshold:
+                reason = f"The retrieved segments have moderate relevance (max: {max_sim:.2f}) but may not provide sufficient detail to answer accurately."
+            else:
+                reason = f"The average quality of retrieved segments is low (avg: {avg_sim:.2f}). Multiple segments needed but quality is insufficient."
+
+            message = (
+                f"Unable to provide a reliable answer based on available video evidence. "
+                f"{reason}\n\n"
+                f"Suggestion: Try queries about physical therapy, injury treatment, or medical procedures "
+                f"that are within the scope of the video collection."
+            )
+        else:
+            message = "Sufficient evidence available"
+
+        return {
+            'sufficient': bool(sufficient),
+            'max_similarity': float(max_sim),
+            'avg_similarity': float(avg_sim),
+            'message': message,
+            'segment_count': int(len(segments))
+        }
+
+    def _inject_timestamps(self, answer_text: str, segments: List[Dict]) -> str:
+        """
+        Post-process answer to inject timestamps for evidence citations.
+
+        Converts:
+        - [Evidence 1] -> [Evidence 1, 02:21-02:23]
+        - Evidence 1 -> Evidence 1 (02:21-02:23)
+        """
+        import re
+
+        # Build evidence number to timestamp mapping
+        evidence_map = {}
+        for i, seg in enumerate(segments, 1):
+            timestamp = seg.get('timestamp', [0, 0])
+
+            # Get precise timestamp if available
+            text_ev = seg.get('text_evidence', {})
+            if text_ev and text_ev.get('precise_timestamp'):
+                precise_ts = text_ev['precise_timestamp']
+                if isinstance(precise_ts, (list, tuple)) and len(precise_ts) == 2:
+                    timestamp = precise_ts
+
+            if isinstance(timestamp, (list, tuple)) and len(timestamp) == 2:
+                ts_str = f"{self._format_time(timestamp[0])}-{self._format_time(timestamp[1])}"
+                evidence_map[i] = ts_str
+
+        # Pattern 1: [Evidence N] -> [Evidence N, HH:MM-HH:MM]
+        def replace_bracketed(match):
+            num = int(match.group(1))
+            if num in evidence_map:
+                return f"[Evidence {num}, {evidence_map[num]}]"
+            return match.group(0)
+
+        answer_text = re.sub(r'\[Evidence\s+(\d+)\]', replace_bracketed, answer_text)
+
+        # Pattern 2: Evidence N (not already in brackets) -> Evidence N (HH:MM-HH:MM)
+        def replace_unbracketed(match):
+            # Check if already followed by timestamp
+            num = int(match.group(1))
+            if num in evidence_map:
+                # Don't replace if already has timestamp
+                if re.match(r'\s*\(?\d{2}:\d{2}', match.group(2) or ''):
+                    return match.group(0)
+                return f"Evidence {num} ({evidence_map[num]})"
+            return match.group(0)
+
+        # Only replace if not already in brackets
+        answer_text = re.sub(r'(?<!\[)Evidence\s+(\d+)(?!\])(\s|[,.])?', replace_unbracketed, answer_text)
+
+        return answer_text
 
     def _extract_evidence(self, segments: List[Dict]) -> List[Dict]:
         """Extract evidence metadata with timestamps"""

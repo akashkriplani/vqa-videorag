@@ -3,8 +3,8 @@ video_processing package
 
 Modular video processing pipeline for medical video QA:
 - ASR (Automatic Speech Recognition)
-- Text embeddings (BioBERT/ClinicalBERT)
-- Visual embeddings (BiomedCLIP)
+- Text embeddings (BiomedCLIP Text Encoder)
+- Visual embeddings (BiomedCLIP Vision Encoder)
 - Deduplication utilities
 - Pipeline orchestration
 """

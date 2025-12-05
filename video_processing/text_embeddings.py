@@ -1,7 +1,7 @@
 """
 Text Embedding Module
 
-Handles text chunking, entity recognition, and BERT embeddings for transcript text.
+Handles text chunking, entity recognition, and BiomedCLIP text embeddings for transcript text.
 Uses sliding window approach with coverage-based deduplication.
 """
 import hashlib
@@ -9,21 +9,26 @@ import torch
 import numpy as np
 import spacy
 from scispacy.umls_linking import UmlsEntityLinker
-from transformers import AutoTokenizer, AutoModel
+import open_clip
 
 # Global flag for NER (can be overridden via environment variable)
 import os
 ENABLE_NER = os.environ.get('ENABLE_NER', 'False').lower() == 'true'
 
 
-def load_ner_and_embed_models():
+def load_ner_and_embed_models(
+    model_id='hf-hub:microsoft/BiomedCLIP-PubMedBERT_256-vit_base_patch16_224'
+):
     """
     Load NER and text embedding models.
 
+    Args:
+        model_id: BiomedCLIP model ID (default: BiomedCLIP-PubMedBERT)
+
     Returns:
         nlp: SpaCy NLP pipeline (None if NER disabled)
-        bert_tokenizer: BioBERT tokenizer
-        bert_model: BioBERT model
+        clip_model: BiomedCLIP model for text embeddings
+        clip_tokenizer: BiomedCLIP tokenizer function
     """
     if ENABLE_NER:
         nlp = spacy.load("en_core_sci_lg")
@@ -32,21 +37,27 @@ def load_ner_and_embed_models():
     else:
         nlp = None
 
-    bert_tokenizer = AutoTokenizer.from_pretrained("emilyalsentzer/Bio_ClinicalBERT")
-    bert_model = AutoModel.from_pretrained("emilyalsentzer/Bio_ClinicalBERT")
+    # Load BiomedCLIP for unified text/visual embedding space
+    clip_model, _, _ = open_clip.create_model_and_transforms(
+        model_id,
+        pretrained=True
+    )
+    clip_model.eval()
+    clip_tokenizer = open_clip.get_tokenizer(model_id)
 
-    return nlp, bert_tokenizer, bert_model
+    return nlp, clip_model, clip_tokenizer
 
 
 def extract_entities_and_embed_optimized(
-    transcript_chunks, nlp, bert_tokenizer, bert_model, video_id,
-    window_size=256, stride=192, max_length=512,
+    transcript_chunks, nlp, clip_model, clip_tokenizer, video_id,
+    window_size=256, stride=192, max_length=77,
     deduplication_mode='coverage', min_coverage_contribution=0.05
 ):
     """
-    Optimized sliding window approach with coverage-based deduplication.
+    Optimized sliding window approach with coverage-based deduplication using BiomedCLIP.
 
     Key improvements:
+    - Uses BiomedCLIP text encoder for embedding space alignment with visual embeddings
     - Coverage-based deduplication ensures 100% transcript coverage
     - Efficient timestamp mapping for accurate segment identification
     - Shared segment_id for linking text and visual embeddings
@@ -55,12 +66,12 @@ def extract_entities_and_embed_optimized(
     Args:
         transcript_chunks: List of transcript chunks with timestamps
         nlp: SpaCy NLP pipeline for entity extraction
-        bert_tokenizer: BERT tokenizer
-        bert_model: BERT model
+        clip_model: BiomedCLIP model for text embeddings
+        clip_tokenizer: BiomedCLIP tokenizer function
         video_id: Unique identifier for the video
-        window_size: 256 tokens (optimal for BERT context)
+        window_size: 256 tokens (reasonable for text context)
         stride: 192 tokens (25% overlap for coverage)
-        max_length: Maximum BERT sequence length
+        max_length: Maximum sequence length for CLIP (default: 77, CLIP's max)
         deduplication_mode: 'coverage' (recommended), 'similarity', 'aggressive', or 'none'
         min_coverage_contribution: Minimum % of new tokens required to keep window (default: 0.05)
 
@@ -90,8 +101,10 @@ def extract_entities_and_embed_optimized(
             'text': text
         })
 
-    # Tokenize full text
-    full_tokens = bert_tokenizer.encode(full_text, add_special_tokens=False)
+    # Tokenize full text using CLIP tokenizer
+    # Note: CLIP uses different tokenization, so we approximate with whitespace split
+    # for sliding window logic, but use actual CLIP tokenization for embeddings
+    full_tokens = full_text.split()  # Approximate tokenization for windowing
 
     if not full_tokens:
         return results
@@ -106,7 +119,7 @@ def extract_entities_and_embed_optimized(
         if len(window_tokens) < window_size // 4:  # Skip very small windows at the end
             continue
 
-        window_text = bert_tokenizer.decode(window_tokens, clean_up_tokenization_spaces=True)
+        window_text = ' '.join(window_tokens)
 
         # Coverage-based deduplication
         content_hash = hashlib.md5(window_text.encode('utf-8')).hexdigest()
@@ -167,15 +180,13 @@ def extract_entities_and_embed_optimized(
             except Exception as e:
                 print(f"NER failed for window {window_idx}: {e}")
 
-        # Generate embedding
-        inputs = bert_tokenizer(window_text, return_tensors="pt",
-                              truncation=True, max_length=max_length,
-                              padding=True)
-
+        # Generate embedding using BiomedCLIP text encoder
         try:
+            # Tokenize with CLIP tokenizer (handles truncation internally)
+            tokens = clip_tokenizer([window_text])
+
             with torch.no_grad():
-                outputs = bert_model(**inputs)
-                emb = outputs.last_hidden_state[:, 0, :].squeeze().cpu().numpy()
+                emb = clip_model.encode_text(tokens).squeeze(0).cpu().numpy()
         except Exception as e:
             print(f"Embedding generation failed for window {window_idx}: {e}")
             continue
@@ -216,18 +227,19 @@ def extract_entities_and_embed_optimized(
     return results
 
 
-def extract_entities_and_embed(transcript_chunks, nlp, bert_tokenizer, bert_model, video_id, **kwargs):
+def extract_entities_and_embed(transcript_chunks, nlp, clip_model, clip_tokenizer, video_id, **kwargs):
     """
-    Unified embedding function using optimized sliding window approach.
+    Unified embedding function using optimized sliding window approach with BiomedCLIP.
 
     Uses window_size=256, stride=192 (25% overlap) for token efficiency.
     Includes integrated deduplication and segment_id for multimodal linking.
+    BiomedCLIP ensures text embeddings align with visual embeddings in same space.
 
     Args:
         transcript_chunks: List of transcript chunks with timestamps
         nlp: SpaCy NLP pipeline for entity extraction
-        bert_tokenizer: BERT tokenizer
-        bert_model: BERT model
+        clip_model: BiomedCLIP model for text embeddings
+        clip_tokenizer: BiomedCLIP tokenizer function
         video_id: Unique identifier for the video being processed
         **kwargs: window_size, stride, max_length (optional overrides)
 
@@ -235,5 +247,5 @@ def extract_entities_and_embed(transcript_chunks, nlp, bert_tokenizer, bert_mode
         List of text embedding dictionaries
     """
     return extract_entities_and_embed_optimized(
-        transcript_chunks, nlp, bert_tokenizer, bert_model, video_id, **kwargs
+        transcript_chunks, nlp, clip_model, clip_tokenizer, video_id, **kwargs
     )
