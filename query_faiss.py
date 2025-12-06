@@ -126,8 +126,8 @@ def main():
 
     # Hybrid search arguments
     parser.add_argument("--hybrid", action="store_true", help="Enable hybrid search (BM25 + dense embeddings)")
-    parser.add_argument("--alpha", type=float, default=0.7, help="Weight for dense retrieval in hybrid search (0-1, default: 0.7)")
-    parser.add_argument("--fusion", type=str, choices=["linear", "rrf"], default="linear", help="Fusion strategy for hybrid search: 'linear' or 'rrf' (Reciprocal Rank Fusion)")
+    parser.add_argument("--alpha", type=float, default=0.3, help="Weight for dense retrieval in hybrid search (0-1, default: 0.3). Lower values favor BM25 lexical matching, higher values favor semantic embeddings. For medical queries with specific terminology, 0.1-0.4 works well.")
+    parser.add_argument("--fusion", type=str, choices=["linear", "rrf"], default="linear", help="Fusion strategy: 'linear' (score-based, respects alpha) or 'rrf' (rank-based, balanced 50/50, ignores alpha). Use 'linear' when you want to control BM25 vs dense weighting.")
     parser.add_argument("--expand_query", action="store_true", default=True, help="Expand query with medical synonyms in BM25 search")
     parser.add_argument("--analyze_fusion", action="store_true", help="Show detailed fusion analysis (BM25 vs dense contribution)")
     parser.add_argument("--output", type=str, default=None, help="Output file path for search results (default: auto-generated based on search type)")
@@ -150,7 +150,8 @@ def main():
     # Auto-generate output filename based on search type if not specified
     if args.output is None:
         if args.hybrid:
-            args.output = "multimodal_search_results_hybrid.json"
+            fusion_suffix = f"_{args.fusion}_a{args.alpha:.1f}"
+            args.output = f"multimodal_search_results_hybrid{fusion_suffix}.json"
         else:
             args.output = "multimodal_search_results_dense.json"
 
@@ -220,6 +221,8 @@ def main():
         print(f"\n{'='*80}")
         print("HYBRID SEARCH ENABLED (BM25 + Dense Embeddings)")
         print(f"{'='*80}")
+        print(f"Configuration: alpha={args.alpha:.2f} (dense weight), fusion={args.fusion}")
+        print(f"Strategy: {int((1-args.alpha)*100)}% BM25 + {int(args.alpha*100)}% Dense")
 
         try:
             # Load segments for BM25 index

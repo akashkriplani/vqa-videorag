@@ -286,7 +286,7 @@ def demo_pipeline(video_path, text_feat_dir, visual_feat_dir, faiss_text_path, f
             # Initialize hybrid search engine
             hybrid_engine = HybridSearchEngine(
                 segments_data=segments_data,
-                alpha=0.7  # 70% dense, 30% BM25
+                alpha=0.3  # 30% dense, 70% BM25 (optimized for medical terminology)
             )
 
             # Transform FAISS results to format expected by hybrid search
