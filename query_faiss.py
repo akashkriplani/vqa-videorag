@@ -33,6 +33,141 @@ from search import (
     load_segments_from_json_dir
 )
 
+# Import evaluation module
+from evaluation import AnswerEvaluator
+
+def find_ground_truth(query, dataset_path):
+    """Find ground truth for a query in MedVidQA dataset"""
+    try:
+        with open(dataset_path, 'r') as f:
+            dataset = json.load(f)
+
+        # Find matching query (case-insensitive)
+        query_lower = query.lower().strip()
+        for sample in dataset:
+            if sample['question'].lower().strip() == query_lower:
+                return {
+                    'video_id': sample['video_id'],
+                    'answer_start': sample['answer_start_second'],
+                    'answer_end': sample['answer_end_second'],
+                    'sample_id': sample.get('sample_id')
+                }
+
+        print(f"⚠️  No matching ground truth found for query: {query}")
+        return None
+    except Exception as e:
+        print(f"⚠️  Failed to load dataset: {e}")
+        return None
+
+
+def evaluate_retrieval(segments, ground_truth):
+    """Evaluate retrieval quality against ground truth"""
+    evaluator = AnswerEvaluator()
+
+    # Extract timestamps from segments
+    predicted_timestamps = []
+    for seg in segments:
+        # Check top-level timestamp (from aggregation)
+        if 'timestamp' in seg and seg['timestamp'] != 'unknown':
+            ts = seg['timestamp']
+            if isinstance(ts, list) and len(ts) == 2:
+                predicted_timestamps.append((ts[0], ts[1]))
+        # Fallback to meta.timestamp
+        elif 'meta' in seg and 'timestamp' in seg.get('meta', {}):
+            meta = seg['meta']
+            ts = meta['timestamp']
+            if isinstance(ts, list) and len(ts) == 2:
+                predicted_timestamps.append((ts[0], ts[1]))
+
+    # Evaluate temporal overlap
+    temporal_metrics = evaluator.evaluate_temporal_overlap(
+        predicted_timestamps=predicted_timestamps,
+        ground_truth_start=ground_truth['answer_start'],
+        ground_truth_end=ground_truth['answer_end']
+    )
+
+    # Check if correct video retrieved
+    correct_video_retrieved = False
+    for seg in segments:
+        video_id = seg.get('video_id') or seg.get('meta', {}).get('video_id')
+        if video_id == ground_truth['video_id']:
+            correct_video_retrieved = True
+            break
+
+    return {
+        'temporal_metrics': temporal_metrics,
+        'correct_video_retrieved': correct_video_retrieved,
+        'num_retrieved': len(segments),
+        'num_with_timestamps': len(predicted_timestamps)
+    }
+
+
+def print_evaluation_metrics(eval_result, ground_truth):
+    """Print formatted evaluation metrics"""
+    print(f"\n{'='*80}")
+    print("EVALUATION METRICS")
+    print(f"{'='*80}")
+
+    print(f"\nGround Truth:")
+    print(f"  Video ID: {ground_truth['video_id']}")
+    print(f"  Answer Time: {ground_truth['answer_start']:.1f}s - {ground_truth['answer_end']:.1f}s")
+    print(f"  Duration: {ground_truth['answer_end'] - ground_truth['answer_start']:.1f}s")
+
+    print(f"\nRetrieval Statistics:")
+    print(f"  Segments retrieved: {eval_result['num_retrieved']}")
+    print(f"  Segments with timestamps: {eval_result['num_with_timestamps']}")
+    print(f"  Correct video retrieved: {'✓ Yes' if eval_result['correct_video_retrieved'] else '✗ No'}")
+
+    tm = eval_result['temporal_metrics']
+    print(f"\nTemporal Accuracy:")
+    print(f"  IoU (Intersection over Union): {tm['iou']:.4f}")
+    print(f"    → Measures overlap between predicted and ground truth intervals")
+    print(f"    → Range: 0.0 (no overlap) to 1.0 (perfect match)")
+
+    print(f"\n  Temporal Precision: {tm['temporal_precision']:.4f}")
+    print(f"    → Percentage of predicted time that overlaps with ground truth")
+    print(f"    → {tm['temporal_precision']*100:.1f}% of retrieved segments are relevant")
+
+    print(f"\n  Temporal Recall: {tm['temporal_recall']:.4f}")
+    print(f"    → Percentage of ground truth time covered by predictions")
+    print(f"    → Found {tm['temporal_recall']*100:.1f}% of the relevant content")
+
+    print(f"\n  Temporal F1: {tm['temporal_f1']:.4f}")
+    print(f"    → Harmonic mean of precision and recall")
+    print(f"    → Best overall metric for temporal accuracy")
+
+    if tm['mean_distance'] != float('inf'):
+        print(f"\n  Mean Distance: {tm['mean_distance']:.2f}s")
+        print(f"    → Average distance from ground truth center")
+        print(f"    → Lower is better (closer to target)")
+
+    # Performance assessment
+    print(f"\n{'='*80}")
+    print("PERFORMANCE ASSESSMENT")
+    print(f"{'='*80}")
+
+    if not eval_result['correct_video_retrieved']:
+        print("❌ CRITICAL: Correct video not retrieved")
+        print("   → Consider: Increase top_k, adjust search weights, or review embeddings")
+    elif tm['iou'] >= 0.7:
+        print("🎯 EXCELLENT: High temporal overlap (IoU ≥ 0.7)")
+        print("   → Retrieved segments closely match ground truth")
+    elif tm['iou'] >= 0.5:
+        print("✓ GOOD: Moderate temporal overlap (IoU ≥ 0.5)")
+        print("   → Retrieved segments partially match ground truth")
+    elif tm['iou'] >= 0.3:
+        print("⚠️  FAIR: Low temporal overlap (IoU ≥ 0.3)")
+        print("   → Consider: Adjust alpha, increase local_k, or enable hierarchical search")
+    else:
+        print("❌ POOR: Very low temporal overlap (IoU < 0.3)")
+        print("   → Recommendations:")
+        print("      • Try hybrid search: --hybrid --alpha 0.3")
+        print("      • Increase retrieval: --local_k 100")
+        print("      • Enable hierarchical: --hierarchical")
+
+    print(f"\n{'='*80}\n")
+
+
 def pretty_print_results(results, query=None):
     """Format search results with rich metadata context"""
     if not results:
@@ -144,6 +279,13 @@ def main():
     parser.add_argument("--quality_threshold", type=float, default=0.3, help="Minimum quality score for context filtering (default: 0.3)")
     parser.add_argument("--nli_top_k", type=int, default=15, help="Number of top candidates for NLI factuality scoring (default: 15)")
     parser.add_argument("--token_budget", type=int, default=600, help="Maximum tokens for curated context (default: 600)")
+
+    # Evaluation arguments
+    parser.add_argument("--eval", action="store_true", help="Enable evaluation mode - provide ground truth to calculate metrics")
+    parser.add_argument("--video_id", type=str, default=None, help="Ground truth video ID for evaluation")
+    parser.add_argument("--answer_start", type=float, default=None, help="Ground truth answer start time (seconds) for evaluation")
+    parser.add_argument("--answer_end", type=float, default=None, help="Ground truth answer end time (seconds) for evaluation")
+    parser.add_argument("--dataset", type=str, default=None, help="Path to MedVidQA JSON file to auto-find ground truth for query")
 
     args = parser.parse_args()
 
@@ -338,6 +480,30 @@ def main():
         )
 
         print_segment_results(segment_contexts, query=args.query, output_file=args.output)
+
+        # Evaluate retrieval quality if ground truth provided
+        ground_truth = None
+
+        # Try to find ground truth from dataset if provided
+        if args.dataset:
+            ground_truth = find_ground_truth(args.query, args.dataset)
+
+        # Or use manually provided ground truth
+        elif args.eval and args.video_id and args.answer_start is not None and args.answer_end is not None:
+            ground_truth = {
+                'video_id': args.video_id,
+                'answer_start': args.answer_start,
+                'answer_end': args.answer_end
+            }
+
+        # Perform evaluation if ground truth available
+        if ground_truth:
+            eval_result = evaluate_retrieval(segment_contexts, ground_truth)
+            print_evaluation_metrics(eval_result, ground_truth)
+        elif args.eval:
+            print(f"\n\u26a0\ufe0f  Evaluation mode enabled but no ground truth provided.")
+            print("   Use --dataset <path> to auto-find, or provide:")
+            print("   --video_id <id> --answer_start <sec> --answer_end <sec>")
 
         # Generate answer if requested
         if args.generate_answer:

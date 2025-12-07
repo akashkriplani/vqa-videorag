@@ -55,6 +55,25 @@ class AnswerEvaluator:
             print("⚠️  rouge-score not available. ROUGE scoring disabled.")
             self.rouge_available = False
 
+        # Initialize BERTScore (for semantic similarity)
+        try:
+            from bert_score import score as bert_score
+            self.bert_score = bert_score
+            self.bertscore_available = True
+        except ImportError:
+            print("⚠️  BERTScore not available. Semantic scoring disabled.")
+            self.bertscore_available = False
+
+        # Initialize SciSpacy for medical entity extraction
+        try:
+            import spacy
+            self.nlp = spacy.load("en_core_sci_md")
+            self.scispacy_available = True
+        except Exception:
+            print("⚠️  SciSpacy not available. Medical entity F1 disabled.")
+            self.nlp = None
+            self.scispacy_available = False
+
     def evaluate_answer(
         self,
         generated: str,
@@ -78,6 +97,8 @@ class AnswerEvaluator:
                 'rouge_1': float, # ROUGE-1 F1
                 'rouge_2': float, # ROUGE-2 F1
                 'rouge_l': float, # ROUGE-L F1
+                'bert_score_f1': float,  # BERTScore F1
+                'medical_entity_f1': float,  # Medical entity overlap F1
                 'average_score': float  # Average of all metrics
             }
         """
@@ -92,6 +113,16 @@ class AnswerEvaluator:
         if self.rouge_available:
             rouge_scores = self._compute_rouge(generated, reference)
             metrics.update(rouge_scores)
+
+        # BERTScore (semantic similarity)
+        if self.bertscore_available:
+            bert_scores = self._compute_bertscore(generated, reference)
+            metrics.update(bert_scores)
+
+        # Medical entity F1
+        if self.scispacy_available:
+            entity_f1 = self._compute_medical_entity_f1(generated, reference)
+            metrics['medical_entity_f1'] = entity_f1
 
         # Calculate average
         if metrics:
@@ -204,6 +235,85 @@ class AnswerEvaluator:
             'unsupported_rate': unsupported_rate,
             'precision': precision,
             'recall': recall
+        }
+
+    def evaluate_temporal_overlap(
+        self,
+        predicted_timestamps: List[Tuple[float, float]],
+        ground_truth_start: float,
+        ground_truth_end: float
+    ) -> Dict[str, float]:
+        """
+        Evaluate temporal overlap between predicted and ground truth timestamps.
+
+        Args:
+            predicted_timestamps: List of (start, end) tuples from retrieved segments
+            ground_truth_start: Ground truth answer start time (seconds)
+            ground_truth_end: Ground truth answer end time (seconds)
+
+        Returns:
+            {
+                'iou': float,           # Intersection over Union (0-1)
+                'temporal_precision': float,  # % of predicted time that overlaps
+                'temporal_recall': float,     # % of ground truth time covered
+                'temporal_f1': float,   # Harmonic mean of precision/recall
+                'mean_distance': float  # Average distance from ground truth
+            }
+        """
+        if not predicted_timestamps:
+            return {
+                'iou': 0.0,
+                'temporal_precision': 0.0,
+                'temporal_recall': 0.0,
+                'temporal_f1': 0.0,
+                'mean_distance': float('inf')
+            }
+
+        gt_interval = (ground_truth_start, ground_truth_end)
+        gt_duration = ground_truth_end - ground_truth_start
+
+        # Calculate union of all predicted intervals
+        predicted_union = self._merge_intervals(predicted_timestamps)
+        pred_duration = sum(end - start for start, end in predicted_union)
+
+        # Calculate intersection with ground truth
+        intersection_duration = 0.0
+        for pred_start, pred_end in predicted_union:
+            overlap_start = max(pred_start, ground_truth_start)
+            overlap_end = min(pred_end, ground_truth_end)
+            if overlap_start < overlap_end:
+                intersection_duration += (overlap_end - overlap_start)
+
+        # IoU (Intersection over Union)
+        union_duration = pred_duration + gt_duration - intersection_duration
+        iou = intersection_duration / union_duration if union_duration > 0 else 0.0
+
+        # Temporal Precision: how much of predicted time overlaps with GT
+        temporal_precision = intersection_duration / pred_duration if pred_duration > 0 else 0.0
+
+        # Temporal Recall: how much of GT time is covered by predictions
+        temporal_recall = intersection_duration / gt_duration if gt_duration > 0 else 0.0
+
+        # Temporal F1
+        if temporal_precision + temporal_recall > 0:
+            temporal_f1 = 2 * (temporal_precision * temporal_recall) / (temporal_precision + temporal_recall)
+        else:
+            temporal_f1 = 0.0
+
+        # Mean distance from ground truth center
+        gt_center = (ground_truth_start + ground_truth_end) / 2
+        distances = []
+        for start, end in predicted_timestamps:
+            pred_center = (start + end) / 2
+            distances.append(abs(pred_center - gt_center))
+        mean_distance = np.mean(distances) if distances else float('inf')
+
+        return {
+            'iou': iou,
+            'temporal_precision': temporal_precision,
+            'temporal_recall': temporal_recall,
+            'temporal_f1': temporal_f1,
+            'mean_distance': mean_distance
         }
 
     def evaluate_batch(
@@ -322,6 +432,91 @@ class AnswerEvaluator:
                 'rouge_2': 0.0,
                 'rouge_l': 0.0
             }
+
+    def _compute_bertscore(self, generated: str, reference: str) -> Dict[str, float]:
+        """Compute BERTScore for semantic similarity"""
+        try:
+            P, R, F1 = self.bert_score(
+                [generated],
+                [reference],
+                lang='en',
+                model_type='microsoft/deberta-xlarge-mnli',  # High-quality model
+                verbose=False
+            )
+            return {
+                'bert_score_precision': float(P[0]),
+                'bert_score_recall': float(R[0]),
+                'bert_score_f1': float(F1[0])
+            }
+        except Exception as e:
+            print(f"⚠️  BERTScore computation failed: {e}")
+            return {
+                'bert_score_precision': 0.0,
+                'bert_score_recall': 0.0,
+                'bert_score_f1': 0.0
+            }
+
+    def _compute_medical_entity_f1(self, generated: str, reference: str) -> float:
+        """Compute F1 score for medical entity overlap"""
+        try:
+            gen_doc = self.nlp(generated)
+            ref_doc = self.nlp(reference)
+
+            # Extract named entities
+            gen_entities = set([ent.text.lower() for ent in gen_doc.ents])
+            ref_entities = set([ent.text.lower() for ent in ref_doc.ents])
+
+            if not ref_entities:
+                return 1.0 if not gen_entities else 0.0
+
+            # Calculate F1
+            true_positives = len(gen_entities & ref_entities)
+            precision = true_positives / len(gen_entities) if gen_entities else 0.0
+            recall = true_positives / len(ref_entities) if ref_entities else 0.0
+
+            if precision + recall > 0:
+                f1 = 2 * (precision * recall) / (precision + recall)
+            else:
+                f1 = 0.0
+
+            return f1
+        except Exception as e:
+            print(f"⚠️  Medical entity F1 computation failed: {e}")
+            return 0.0
+
+    def _merge_intervals(self, intervals: List[Tuple[float, float]]) -> List[Tuple[float, float]]:
+        """Merge overlapping time intervals"""
+        if not intervals:
+            return []
+
+        # Sort by start time
+        sorted_intervals = sorted(intervals, key=lambda x: x[0])
+        merged = [sorted_intervals[0]]
+
+        for current in sorted_intervals[1:]:
+            last = merged[-1]
+            # If intervals overlap, merge them
+            if current[0] <= last[1]:
+                merged[-1] = (last[0], max(last[1], current[1]))
+            else:
+                merged.append(current)
+
+        return merged
+
+    def _parse_timestamp(self, timestamp_str: str) -> float:
+        """Parse timestamp string (MM:SS or HH:MM:SS) to seconds"""
+        try:
+            parts = timestamp_str.strip().split(':')
+            if len(parts) == 2:  # MM:SS
+                minutes, seconds = parts
+                return int(minutes) * 60 + int(seconds)
+            elif len(parts) == 3:  # HH:MM:SS
+                hours, minutes, seconds = parts
+                return int(hours) * 3600 + int(minutes) * 60 + int(seconds)
+            else:
+                return float(timestamp_str)
+        except Exception:
+            return 0.0
 
     def _compute_retrieval_metrics(
         self,

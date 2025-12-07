@@ -33,6 +33,7 @@ class VideoProcessorConfig:
         min_frames=3,                   # NEW: Minimum frames for short segments
         max_frames=12,                  # NEW: Maximum frames for long segments
         # Visual deduplication config
+        enable_visual_deduplication=True,  # Enable/disable visual deduplication
         visual_similarity_threshold=0.98
     ):
         """
@@ -51,6 +52,7 @@ class VideoProcessorConfig:
             aggregation_method: 'mean' or 'max' (default: 'max' - captures best frame)
             min_frames: Minimum frames for short segments (default: 3)
             max_frames: Maximum frames for long segments (default: 12)
+            enable_visual_deduplication: Enable visual deduplication (default: True)
             visual_similarity_threshold: Cosine similarity threshold for dedup (default: 0.98)
         """
         # ASR
@@ -69,6 +71,7 @@ class VideoProcessorConfig:
         self.aggregation_method = aggregation_method
         self.min_frames = min_frames
         self.max_frames = max_frames
+        self.enable_visual_deduplication = enable_visual_deduplication
         self.visual_similarity_threshold = visual_similarity_threshold
 
 
@@ -157,13 +160,17 @@ class VideoProcessor:
         )
         print(f"✓ Visual embeddings: {len(visual_results)} segments")
 
-        # Step 4: Deduplication - Apply similarity-based deduplication to visual embeddings
-        print(f"\n[4/4] Deduplicating visual embeddings for {video_id}...")
-        visual_results = deduplicate_embeddings_similarity(
-            visual_results,
-            similarity_threshold=self.config.visual_similarity_threshold
-        )
-        print(f"✓ Visual embeddings after dedup: {len(visual_results)} segments")
+        # Step 4: Deduplication - Apply similarity-based deduplication to visual embeddings (optional)
+        if self.config.enable_visual_deduplication:
+            print(f"\n[4/4] Deduplicating visual embeddings for {video_id}...")
+            visual_results_before = len(visual_results)
+            visual_results = deduplicate_embeddings_similarity(
+                visual_results,
+                similarity_threshold=self.config.visual_similarity_threshold
+            )
+            print(f"✓ Visual embeddings after dedup: {len(visual_results)} segments (removed {visual_results_before - len(visual_results)})")
+        else:
+            print(f"\n[4/4] Skipping visual deduplication (disabled)")
 
         # Save visual features if directory provided
         if visual_json_path:
