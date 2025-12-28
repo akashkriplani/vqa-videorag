@@ -15,14 +15,13 @@ Key Features:
 - Video Analysis: Distribution of questions across videos, identification of top videos
 - Temporal Analysis: Distribution of answer timestamps within videos
 - Question Analysis: Length distribution, duplicate detection
-- Correlation Analysis: Relationship between video length and question count
-- Missing Data Detection: Identifies incomplete or missing data fields
+- Correlation Analysis: Relationship between mutliple feature variables
 
 Visualizations Generated:
 ------------------------
 - Bar plots: Top 20 videos by question count
 - Histograms: Video lengths, question lengths, questions per video
-- Heatmaps: Missing data patterns, 2D distribution of questions vs video length
+- Heatmaps: Correlation matrix
 - Scatter plots: Video length vs number of questions correlation
 - Temporal distributions: Answer start and end times
 
@@ -263,38 +262,6 @@ def plot_questions_per_video_hist(df, set_name):
     print(f'Questions per video stats ({set_name}):')
     print(q_per_video.describe())
 
-
-def plot_missing_data(df, set_name):
-    """
-    Generate a heatmap visualization of missing data patterns in the dataset.
-
-    Creates a binary heatmap where missing values are highlighted, making it easy to identify
-    columns with missing data and patterns in missingness across the dataset.
-
-    Args:
-        df (pd.DataFrame): DataFrame containing the dataset.
-        set_name (str): Name of the dataset split (e.g., 'Train', 'Test', 'Validation').
-
-    Output:
-        - Saves a PNG file: 'EDA/eda_missing_data_{set_name}.png'
-        - Prints count of missing values per column
-
-    Returns:
-        None
-
-    Note:
-        White areas in the heatmap indicate missing values, colored areas indicate present values.
-    """
-    plt.figure(figsize=(10,5))
-    sns.heatmap(df.isnull(), cbar=False)
-    plt.title(f'Missing Data Heatmap ({set_name} Set)')
-    plt.tight_layout()
-    plt.savefig(os.path.join(EDA_DIR, f'eda_missing_data_{set_name.lower()}.png'))
-    plt.close()
-    print(f'Missing data summary ({set_name}):')
-    print(df.isnull().sum())
-
-
 def plot_temporal_distribution(df, set_name):
     """
     Generate overlapping histograms showing temporal distribution of answer timestamps.
@@ -415,42 +382,93 @@ def plot_duplicate_questions(df, set_name):
         print(f'Duplicate questions ({set_name}): {num_dupes} / {total} ({num_dupes/total:.2%})')
 
 
-def plot_heatmap_questions_vs_video_length(df, set_name):
+def plot_correlation_matrix(df, set_name):
     """
-    Generate a 2D histogram heatmap of questions per video vs. video length.
+    Generate a correlation matrix heatmap showing relationships between multiple numerical variables.
 
-    Creates a two-dimensional heatmap that shows the joint distribution of video length and
-    question count, revealing patterns in how these two variables interact. Darker/brighter
-    areas indicate higher concentration of videos.
+    Creates a comprehensive correlation matrix analyzing relationships between video length,
+    number of questions per video, average question length, answer start/end times, and
+    answer duration. This true multivariate analysis reveals complex interdependencies
+    between multiple features simultaneously.
 
     Args:
-        df (pd.DataFrame): DataFrame containing the dataset with 'video_id' and 'video_length' columns.
+        df (pd.DataFrame): DataFrame containing the dataset with numerical columns.
         set_name (str): Name of the dataset split (e.g., 'Train', 'Test', 'Validation').
 
     Output:
-        Saves a PNG file: 'EDA/eda_heatmap_questions_vs_video_length_{set_name}.png'
+        - Saves a PNG file: 'EDA/eda_correlation_matrix_{set_name}.png'
+        - Prints the correlation matrix values
 
     Returns:
         None
 
     Note:
-        - Only processes data if 'video_length' column is present.
-        - Uses viridis colormap with probability threshold for better visualization.
-        - Helps identify if certain video length ranges tend to have specific question counts.
+        - Requires 'video_length' column to be present.
+        - Computes derived features: num_questions, avg_question_length, answer_duration.
+        - Uses coolwarm colormap with annotations for clear interpretation.
+        - Correlation values range from -1 (negative) to +1 (positive correlation).
     """
-    if 'video_length' in df.columns:
-        q_per_video = df['video_id'].value_counts().reset_index()
-        q_per_video.columns = ['video_id', 'num_questions']
-        video_lengths = df.drop_duplicates('video_id')[['video_id', 'video_length']]
-        merged = pd.merge(q_per_video, video_lengths, on='video_id')
-        plt.figure(figsize=(8,6))
-        sns.histplot(data=merged, x='video_length', y='num_questions', bins=30, pthresh=.1, cmap='viridis')
-        plt.title(f'Heatmap: Questions per Video vs. Video Length ({set_name} Set)')
-        plt.xlabel('Video Length (s)')
-        plt.ylabel('Questions per Video')
-        plt.tight_layout()
-        plt.savefig(os.path.join(EDA_DIR, f'eda_heatmap_questions_vs_video_length_{set_name.lower()}.png'))
-        plt.close()
+    if 'video_length' not in df.columns:
+        print(f'Skipping correlation matrix for {set_name}: video_length column not present')
+        return
+
+    # Prepare multivariate features
+    video_features = []
+    for video_id in df['video_id'].unique():
+        video_data = df[df['video_id'] == video_id]
+
+        features = {
+            'video_length': video_data['video_length'].iloc[0],
+            'num_questions': len(video_data)
+        }
+
+        # Add question length if available
+        if 'question' in df.columns:
+            features['avg_question_length'] = video_data['question'].apply(
+                lambda x: len(str(x).split())
+            ).mean()
+
+        # Add temporal features if available
+        if 'answer_start_second' in df.columns:
+            features['avg_answer_start'] = video_data['answer_start_second'].mean()
+
+        if 'answer_end_second' in df.columns:
+            features['avg_answer_end'] = video_data['answer_end_second'].mean()
+
+        # Calculate answer duration if both start and end are available
+        if 'answer_start_second' in df.columns and 'answer_end_second' in df.columns:
+            features['avg_answer_duration'] = (
+                video_data['answer_end_second'] - video_data['answer_start_second']
+            ).mean()
+
+        video_features.append(features)
+
+    features_df = pd.DataFrame(video_features)
+
+    # Compute correlation matrix
+    correlation_matrix = features_df.corr()
+
+    # Plot heatmap
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(
+        correlation_matrix,
+        annot=True,
+        fmt='.3f',
+        cmap='coolwarm',
+        center=0,
+        square=True,
+        linewidths=1,
+        cbar_kws={'label': 'Correlation Coefficient'}
+    )
+    plt.title(f'Correlation Matrix - Multivariate Analysis ({set_name} Set)', fontsize=14, pad=20)
+    plt.tight_layout()
+    plt.savefig(os.path.join(EDA_DIR, f'eda_correlation_matrix_{set_name.lower()}.png'), dpi=300)
+    plt.close()
+
+    print(f'\nCorrelation Matrix ({set_name} Set):')
+    print(correlation_matrix)
+    print(f'\nNumber of variables analyzed: {len(correlation_matrix.columns)}')
+    print(f'Features: {", ".join(correlation_matrix.columns)}')
 
 # --- Univariate Analysis ---
 def univariate_analysis(df, set_name):
@@ -499,36 +517,39 @@ def bivariate_analysis(df, set_name):
         Generates multiple visualizations and prints statistics:
         - Temporal distribution of answers within videos
         - Correlation between video length and question count
-        - Duplicate question analysis
 
     Returns:
         None
     """
     plot_temporal_distribution(df, set_name)
     plot_correlation_video_length_questions(df, set_name)
-    plot_duplicate_questions(df, set_name)
 
 # --- Multivariate Analysis ---
 def multivariate_analysis(df, set_name):
     """
     Perform comprehensive multivariate analysis on the dataset.
 
-    Analyzes complex interactions between multiple variables simultaneously to reveal patterns
-    that may not be apparent in univariate or bivariate analyses. Currently focuses on the
-    joint distribution of video length and question count.
+    Analyzes complex interactions between multiple variables (3+) simultaneously to reveal
+    patterns that may not be apparent in univariate or bivariate analyses. This includes
+    correlation analysis between video characteristics, question patterns, and temporal features.
 
     Args:
         df (pd.DataFrame): DataFrame containing the dataset to analyze.
         set_name (str): Name of the dataset split (e.g., 'Train', 'Test', 'Validation').
 
     Output:
-        Generates 2D heatmap visualization showing the relationship between multiple variables:
-        - Questions per video vs. video length heatmap
+        Generates multivariate visualizations:
+        - Correlation matrix heatmap: Relationships between video_length, num_questions,
+          avg_question_length, avg_answer_start, avg_answer_end, and avg_answer_duration
 
     Returns:
         None
+
+    Note:
+        True multivariate analysis examines 3 or more variables simultaneously. The correlation
+        matrix provides a comprehensive view of all pairwise relationships among multiple features.
     """
-    plot_heatmap_questions_vs_video_length(df, set_name)
+    plot_correlation_matrix(df, set_name)
 
 def main():
     """

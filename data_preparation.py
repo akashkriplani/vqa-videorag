@@ -104,7 +104,6 @@ def _sanitize_for_filename(s: str) -> str:
     """
     return re.sub(r"[^A-Za-z0-9]+", "_", s)
 
-
 def filter_json_by_embeddings(model_name: str):
     """Filter dataset JSON files to keep only entries with both textual and visual embeddings.
 
