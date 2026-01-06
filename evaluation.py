@@ -137,34 +137,53 @@ class AnswerEvaluator:
         retrieved_segments: List[Dict],
         relevant_segment_ids: Set[str],
         k_values: Optional[List[int]] = None
-    ) -> Dict[str, Dict[str, float]]:
+    ) -> Dict:
         """
-        Evaluate retrieval quality using Precision@K, Recall@K, F1@K.
+        Evaluate retrieval quality using Precision@K, Recall@K, F1@K, mAP, and nDCG@K.
 
         Args:
             retrieved_segments: List of retrieved segments (ordered by relevance)
             relevant_segment_ids: Set of ground truth relevant segment IDs
-            k_values: List of K values to evaluate (default: [1, 3, 5, 10])
+            k_values: List of K values to evaluate (default: [5, 10])
 
         Returns:
             {
-                'k=1': {'precision': float, 'recall': float, 'f1': float},
-                'k=3': {'precision': float, 'recall': float, 'f1': float},
-                ...
+                'precision@5': float,
+                'recall@5': float,
+                'f1@5': float,
+                'precision@10': float,
+                'recall@10': float,
+                'f1@10': float,
+                'mAP': float,
+                'nDCG@5': float,
+                'nDCG@10': float
             }
         """
         if k_values is None:
-            k_values = [1, 3, 5, 10]
+            k_values = [5, 10]
 
         results = {}
 
+        # Precision@K, Recall@K, F1@K for each k
         for k in k_values:
-            metrics = self._compute_retrieval_metrics(
-                retrieved_segments[:k],
+            metrics = self._compute_retrieval_metrics(retrieved_segments, relevant_segment_ids, k)
+            results[f'precision@{k}'] = metrics['precision']
+            results[f'recall@{k}'] = metrics['recall']
+            results[f'f1@{k}'] = metrics['f1']
+
+        # Mean Average Precision
+        results['mAP'] = self.compute_average_precision(
+            retrieved_segments,
+            relevant_segment_ids
+        )
+
+        # nDCG@K for each k
+        for k in k_values:
+            results[f'nDCG@{k}'] = self.compute_ndcg(
+                retrieved_segments,
                 relevant_segment_ids,
-                k
+                k=k
             )
-            results[f'k={k}'] = metrics
 
         return results
 
@@ -517,6 +536,76 @@ class AnswerEvaluator:
                 return float(timestamp_str)
         except Exception:
             return 0.0
+
+    def compute_average_precision(
+        self,
+        retrieved_segments: List[Dict],
+        relevant_segment_ids: Set[str]
+    ) -> float:
+        """
+        Compute Average Precision for ranked retrieval results.
+
+        AP = sum(P@k * rel(k)) / number_of_relevant_items
+
+        Args:
+            retrieved_segments: List of retrieved segments (ordered by relevance)
+            relevant_segment_ids: Set of ground truth relevant segment IDs
+
+        Returns:
+            Average Precision score (0.0 to 1.0)
+        """
+        if not relevant_segment_ids:
+            return 0.0
+
+        num_relevant = len(relevant_segment_ids)
+        precision_at_k = []
+        num_relevant_seen = 0
+
+        for k, seg in enumerate(retrieved_segments, 1):
+            seg_id = seg.get('segment_id') or seg.get('evidence_id') or seg.get('meta', {}).get('segment_id')
+
+            if seg_id in relevant_segment_ids:
+                num_relevant_seen += 1
+                precision_at_k.append(num_relevant_seen / k)
+
+        if not precision_at_k:
+            return 0.0
+
+        return sum(precision_at_k) / num_relevant
+
+    def compute_ndcg(
+        self,
+        retrieved_segments: List[Dict],
+        relevant_segment_ids: Set[str],
+        k: int = 10
+    ) -> float:
+        """
+        Compute Normalized Discounted Cumulative Gain at K.
+
+        Accounts for ranking quality - relevant items ranked higher get more weight.
+
+        Args:
+            retrieved_segments: List of retrieved segments (ordered by relevance)
+            relevant_segment_ids: Set of ground truth relevant segment IDs
+            k: Cutoff position (default: 10)
+
+        Returns:
+            nDCG@K score (0.0 to 1.0)
+        """
+        import math
+
+        # DCG calculation
+        dcg = 0.0
+        for i, seg in enumerate(retrieved_segments[:k], 1):
+            seg_id = seg.get('segment_id') or seg.get('evidence_id') or seg.get('meta', {}).get('segment_id')
+            relevance = 1.0 if seg_id in relevant_segment_ids else 0.0
+            dcg += relevance / math.log2(i + 1)
+
+        # IDCG (ideal DCG - all relevant items at top)
+        num_relevant = min(len(relevant_segment_ids), k)
+        idcg = sum(1.0 / math.log2(i + 2) for i in range(num_relevant))
+
+        return dcg / idcg if idcg > 0 else 0.0
 
     def _compute_retrieval_metrics(
         self,

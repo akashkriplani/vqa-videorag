@@ -94,11 +94,56 @@ def evaluate_retrieval(segments, ground_truth):
             correct_video_retrieved = True
             break
 
+    # Determine relevant segments: same video AND temporal overlap with ground truth
+    relevant_segment_ids = set()
+    gt_start = ground_truth['answer_start']
+    gt_end = ground_truth['answer_end']
+
+    for seg in segments:
+        video_id = seg.get('video_id') or seg.get('meta', {}).get('video_id')
+        seg_id = seg.get('segment_id') or seg.get('meta', {}).get('segment_id')
+
+        # Check if same video
+        if video_id == ground_truth['video_id'] and seg_id:
+            # Check temporal overlap
+            ts = seg.get('timestamp') or seg.get('meta', {}).get('timestamp')
+            if ts and isinstance(ts, list) and len(ts) == 2:
+                seg_start, seg_end = ts[0], ts[1]
+                # Check if there's any overlap
+                overlap_start = max(seg_start, gt_start)
+                overlap_end = min(seg_end, gt_end)
+                if overlap_start < overlap_end:  # There is overlap
+                    relevant_segment_ids.add(seg_id)
+
+    # Compute retrieval metrics (Precision@K, Recall@K, F1@K, mAP, nDCG@K)
+    retrieval_metrics = {}
+    if relevant_segment_ids:
+        retrieval_metrics = evaluator.evaluate_retrieval(
+            retrieved_segments=segments,
+            relevant_segment_ids=relevant_segment_ids,
+            k_values=[5, 10]
+        )
+    else:
+        # No relevant segments found - return zeros
+        retrieval_metrics = {
+            'precision@5': 0.0,
+            'recall@5': 0.0,
+            'f1@5': 0.0,
+            'precision@10': 0.0,
+            'recall@10': 0.0,
+            'f1@10': 0.0,
+            'mAP': 0.0,
+            'nDCG@5': 0.0,
+            'nDCG@10': 0.0
+        }
+
     return {
         'temporal_metrics': temporal_metrics,
+        'retrieval_metrics': retrieval_metrics,
         'correct_video_retrieved': correct_video_retrieved,
         'num_retrieved': len(segments),
-        'num_with_timestamps': len(predicted_timestamps)
+        'num_with_timestamps': len(predicted_timestamps),
+        'num_relevant_segments': len(relevant_segment_ids)
     }
 
 
@@ -116,11 +161,33 @@ def print_evaluation_metrics(eval_result, ground_truth):
     print(f"\nRetrieval Statistics:")
     print(f"  Segments retrieved: {eval_result['num_retrieved']}")
     print(f"  Segments with timestamps: {eval_result['num_with_timestamps']}")
+    print(f"  Relevant segments (with temporal overlap): {eval_result['num_relevant_segments']}")
     print(f"  Correct video retrieved: {'✓ Yes' if eval_result['correct_video_retrieved'] else '✗ No'}")
+
+    # Ranking Metrics
+    rm = eval_result['retrieval_metrics']
+    print(f"\nRanking Quality Metrics:")
+    print(f"  mAP (Mean Average Precision): {rm['mAP']:.4f}")
+    print(f"    → Measures ranking quality across all positions")
+    print(f"    → Range: 0.0 (worst) to 1.0 (perfect ranking)")
+
+    print(f"\n  nDCG@5: {rm['nDCG@5']:.4f}")
+    print(f"  nDCG@10: {rm['nDCG@10']:.4f}")
+    print(f"    → Normalized Discounted Cumulative Gain")
+    print(f"    → Penalizes relevant items at lower ranks")
+    print(f"    → Range: 0.0 (worst) to 1.0 (ideal ranking)")
+
+    print(f"\n  Precision@5: {rm['precision@5']:.4f} ({rm['precision@5']*100:.1f}% of top-5 are relevant)")
+    print(f"  Recall@5: {rm['recall@5']:.4f} ({rm['recall@5']*100:.1f}% of relevant segments found in top-5)")
+    print(f"  F1@5: {rm['f1@5']:.4f}")
+
+    print(f"\n  Precision@10: {rm['precision@10']:.4f} ({rm['precision@10']*100:.1f}% of top-10 are relevant)")
+    print(f"  Recall@10: {rm['recall@10']:.4f} ({rm['recall@10']*100:.1f}% of relevant segments found in top-10)")
+    print(f"  F1@10: {rm['f1@10']:.4f}")
 
     tm = eval_result['temporal_metrics']
     print(f"\nTemporal Accuracy:")
-    print(f"  IoU (Intersection over Union): {tm['iou']:.4f}")
+    print(f"  mIoU (Mean Intersection over Union): {tm['iou']:.4f}")
     print(f"    → Measures overlap between predicted and ground truth intervals")
     print(f"    → Range: 0.0 (no overlap) to 1.0 (perfect match)")
 
