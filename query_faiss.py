@@ -311,6 +311,7 @@ def pretty_print_results(results, query=None):
 def main():
     parser = argparse.ArgumentParser(description="Query FAISS textual/visual indices using user query embeddings")
     parser.add_argument("--query", type=str, required=False, help="Text query to search (if omitted you'll be prompted)")
+    parser.add_argument("--split", type=str, required=True, choices=["train", "test", "val", "all"], help="REQUIRED: Dataset split to search. Use 'test' for test set, 'train' for training set, 'val' for validation, or 'all' for demo/exploration (NOT recommended for evaluation - causes data mixing). Always specify split to ensure clear search scope.")
     parser.add_argument("--text_index", type=str, default=None, help="Path to textual FAISS index (optional; auto-discover in faiss_db/ if omitted)")
     parser.add_argument("--visual_index", type=str, default=None, help="Path to visual FAISS index (optional; auto-discover in faiss_db/ if omitted)")
     parser.add_argument("--final_k", type=int, default=10, help="FINAL number of combined results to return (default: 10)")
@@ -343,7 +344,7 @@ def main():
     # Adaptive context selection arguments
     parser.add_argument("--enable_curation", action="store_true", default=False, help="Enable adaptive context selection with factual grounding (default: False)")
     parser.add_argument("--enable_attribution", action="store_true", default=False, help="Enable self-reflection attribution mapping (default: False)")
-    parser.add_argument("--quality_threshold", type=float, default=0.3, help="Minimum quality score for context filtering (default: 0.3)")
+    parser.add_argument("--quality_threshold", type=float, default=0.1, help="Minimum quality score for context filtering (default: 0.1)")
     parser.add_argument("--nli_top_k", type=int, default=15, help="Number of top candidates for NLI factuality scoring (default: 15)")
     parser.add_argument("--token_budget", type=int, default=600, help="Maximum tokens for curated context (default: 600)")
 
@@ -372,13 +373,29 @@ def main():
             raise ValueError("No query provided")
 
     # Auto-discover indexes in faiss_db/ if explicit paths are not provided
-    def discover_indexes(prefix):
+    def discover_indexes(prefix, split="all"):
         import glob
-        paths = sorted(glob.glob(os.path.join("faiss_db", f"{prefix}_*.index")))
+        if split == "all":
+            # Load all splits
+            paths = sorted(glob.glob(os.path.join("faiss_db", f"{prefix}_*.index")))
+        else:
+            # Load only specific split to prevent data leakage
+            paths = sorted(glob.glob(os.path.join("faiss_db", f"{prefix}_{split}.index")))
         return paths
 
-    text_index_paths = [args.text_index] if args.text_index else discover_indexes("textual")
-    visual_index_paths = [args.visual_index] if args.visual_index else discover_indexes("visual")
+    text_index_paths = [args.text_index] if args.text_index else discover_indexes("textual", args.split)
+    visual_index_paths = [args.visual_index] if args.visual_index else discover_indexes("visual", args.split)
+
+    # Print which indices are being loaded
+    print(f"\n{'='*80}")
+    if args.split == "all":
+        print(f"⚠️  SEARCH SCOPE: ALL SPLITS (train+val+test combined)")
+        print(f"⚠️  This mixes different dataset partitions - use for demo/exploration only")
+        print(f"⚠️  For evaluation, use --split test (or --split train/val)")
+    else:
+        print(f"🎯 SEARCH SCOPE: {args.split.upper()} SPLIT ONLY")
+        print(f"✅ Clean split isolation - results are from {args.split} set only")
+    print(f"{'='*80}")
 
     if not text_index_paths and not visual_index_paths:
         raise ValueError("No FAISS indexes found in faiss_db/. Place textual_*.index or visual_*.index or pass explicit paths.")
@@ -434,8 +451,19 @@ def main():
         print(f"Strategy: {int((1-args.alpha)*100)}% BM25 + {int(args.alpha*100)}% Dense")
 
         try:
-            # Load segments for BM25 index
-            segments_data = load_segments_from_json_dir(args.json_dir)
+            # Load segments for BM25 index - respect split to prevent data leakage
+            segments_data = []
+            if args.split == 'all':
+                segments_data = load_segments_from_json_dir(args.json_dir)
+                print(f"   Loading BM25 segments from all splits")
+            else:
+                # Load only from the specific split
+                for modality in ['textual', 'visual']:
+                    split_dir = os.path.join(args.json_dir, modality, args.split)
+                    if os.path.exists(split_dir):
+                        split_segments = load_segments_from_json_dir(split_dir)
+                        segments_data.extend(split_segments)
+                print(f"   Loading BM25 segments from {args.split} split only")
 
             # Initialize hybrid search engine
             hybrid_engine = HybridSearchEngine(

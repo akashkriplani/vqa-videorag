@@ -105,7 +105,7 @@ class ContextSelector:
         self.selection_strategies = {
             'procedural': {
                 'max_segments': 5,
-                'prioritize': 'temporal_order',
+                'prioritize': 'top_score',  # Changed from temporal_order to preserve quality
                 'diversity_threshold': 0.85
             },
             'diagnostic': {
@@ -120,7 +120,7 @@ class ContextSelector:
             },
             'general': {
                 'max_segments': 3,
-                'prioritize': 'balanced',
+                'prioritize': 'top_score',  # Changed from balanced to top_score
                 'diversity_threshold': 0.80
             }
         }
@@ -168,6 +168,21 @@ class ContextSelector:
         filtered_segments = self.filter_quality(segments)
         stats['after_quality_filter'] = len(filtered_segments)
         print(f"After quality filtering: {len(filtered_segments)} segments")
+
+        # Debug logging if all segments filtered out (Option 3)
+        if len(filtered_segments) == 0 and len(segments) > 0:
+            print(f"\n⚠️  WARNING: All segments filtered out! Debugging...")
+            for i, seg in enumerate(segments[:3]):  # Show first 3
+                print(f"\nSegment {i+1}:")
+                print(f"  combined_score: {seg.get('combined_score', 0.0):.3f} (threshold: {self.quality_threshold})")
+                text_evidence = seg.get('text_evidence', {})
+                text = text_evidence.get('text', '') if text_evidence else ''
+                print(f"  text_evidence exists: {bool(text_evidence)}")
+                print(f"  text length: {len(text)}")
+                if text:
+                    print(f"  text preview: {text[:100]}...")
+                print(f"  timestamp: {seg.get('timestamp')}")
+                print(f"  video_id: {seg.get('video_id')}")
 
         if not filtered_segments:
             return {
@@ -217,12 +232,13 @@ class ContextSelector:
 
     def filter_quality(self, segments: List[Dict]) -> List[Dict]:
         """
-        Filter out low-quality segments.
+        Filter out low-quality segments (MORE LENIENT - Option 2).
 
         Criteria:
         - Score threshold (combined_score > quality_threshold)
-        - Text completeness (min 50 characters)
-        - Valid timestamp
+        - Text completeness (min 20 characters, down from 50)
+        - Allow segments without text if they have high visual scores
+        - Timestamp is optional for high-scoring segments
         """
         filtered = []
 
@@ -232,19 +248,32 @@ class ContextSelector:
             if combined_score < self.quality_threshold:
                 continue
 
-            # Check text completeness
+            # Check text completeness (MORE LENIENT)
             text_evidence = seg.get('text_evidence', {})
+            has_valid_text = False
+
             if text_evidence:
                 text = text_evidence.get('text', '')
-                if len(text) < 50:
-                    continue
+                # Lower minimum from 50 to 20 characters
+                if text and len(text) >= 20:
+                    has_valid_text = True
 
-            # Check valid timestamp
-            timestamp = seg.get('timestamp')
-            if not timestamp or not isinstance(timestamp, (list, tuple)) or len(timestamp) != 2:
+            # Allow segments without text if they have high visual scores
+            visual_score = seg.get('visual_score', 0.0)
+            if not has_valid_text and visual_score < 0.5:
                 continue
 
-            filtered.append(seg)
+            # Check valid timestamp (OPTIONAL for high-scoring segments)
+            timestamp = seg.get('timestamp')
+            has_valid_timestamp = (
+                timestamp and
+                isinstance(timestamp, (list, tuple)) and
+                len(timestamp) == 2
+            )
+
+            # Accept if: has valid timestamp OR high combined score
+            if has_valid_timestamp or combined_score > 0.6:
+                filtered.append(seg)
 
         return filtered
 
@@ -258,45 +287,44 @@ class ContextSelector:
         Score segments using rule-based relevance metrics.
 
         Components:
-        - Semantic similarity (from existing embeddings)
-        - Entity overlap (medical term matching)
-        - Question type alignment
+        - Base score (combined_score from retrieval)
+        - Entity overlap bonus (medical term matching)
+        - Question type alignment bonus
 
         Formula:
-            relevance = 0.4 * semantic_sim + 0.3 * entity_overlap +
-                       0.2 * question_match + 0.1 * retrieval_confidence
+            relevance = combined_score + 0.2 * entity_overlap + 0.1 * question_match
+            (Preserves original retrieval ranking while adding domain-specific boosts)
         """
         query_entities = self._extract_entities(query)
 
         scored = []
         for seg in segments:
-            text_score = seg.get('text_score', 0.0)
-            visual_score = seg.get('visual_score', 0.0)
+            # Use combined_score as primary score (already fuses text + visual)
             combined_score = seg.get('combined_score', 0.0)
+
+            # Fallback to text_score if combined_score not available
+            if combined_score == 0.0:
+                combined_score = seg.get('text_score', 0.0)
 
             # Get segment text
             text_evidence = seg.get('text_evidence', {})
             seg_text = text_evidence.get('text', '') if text_evidence else ''
 
-            # Calculate entity overlap
+            # Calculate entity overlap bonus
             seg_entities = self._extract_entities(seg_text)
             entity_overlap = self._calculate_entity_overlap(query_entities, seg_entities)
 
-            # Calculate question type alignment
+            # Calculate question type alignment bonus
             question_match = self._score_question_alignment(query_type, seg)
 
-            # Compute final relevance score
-            relevance_score = (
-                0.4 * text_score +
-                0.3 * entity_overlap +
-                0.2 * question_match +
-                0.1 * combined_score
-            )
+            # Compute final relevance score (preserve base + add bonuses)
+            relevance_score = combined_score + 0.2 * entity_overlap + 0.1 * question_match
 
             seg['relevance_score'] = relevance_score
+            seg['original_combined_score'] = combined_score  # Preserve for quality checks
             scored.append(seg)
 
-        # Sort by relevance score
+        # Sort by relevance score (descending)
         scored.sort(key=lambda x: x['relevance_score'], reverse=True)
 
         return scored
@@ -633,7 +661,7 @@ class ContextSelector:
         return None
 
     def _has_negation_conflict(self, text_i: str, text_j: str) -> bool:
-        """Check for negation conflicts"""
+        """Check for negation conflicts (STRICTER - avoid false positives)"""
         negation_words = {'not', 'never', 'avoid', "don't", 'do not', 'no', 'cannot', "can't"}
 
         words_i = set(re.findall(r'\b[a-z]+\b', text_i.lower()))
@@ -645,8 +673,12 @@ class ContextSelector:
         # XOR: one has negation, other doesn't, but similar words
         if has_neg_i != has_neg_j:
             common_words = (words_i - negation_words) & (words_j - negation_words)
-            if len(common_words) > 5:
-                return True
+            # Increased threshold from 5 to 20 to reduce false positives
+            # Also require high overlap ratio
+            if len(common_words) > 20:
+                overlap_ratio = len(common_words) / min(len(words_i), len(words_j))
+                if overlap_ratio > 0.5:  # At least 50% word overlap
+                    return True
 
         return False
 

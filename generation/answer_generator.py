@@ -379,8 +379,8 @@ Answer:"""
         self,
         segments: List[Dict],
         query: str,
-        min_similarity_threshold: float = 0.62,
-        min_avg_similarity: float = 0.50
+        min_similarity_threshold: float = 0.45,
+        min_avg_similarity: float = 0.35
     ) -> Dict:
         """
         Assess whether retrieved segments are relevant enough to answer the query.
@@ -390,8 +390,8 @@ Answer:"""
         Args:
             segments: Retrieved segments
             query: User query
-            min_similarity_threshold: Minimum required top similarity (default: 0.62 - adjusted for BiomedCLIP limitations)
-            min_avg_similarity: Minimum required average similarity (default: 0.50)
+            min_similarity_threshold: Minimum required top similarity (default: 0.45 - lowered for better recall)
+            min_avg_similarity: Minimum required average similarity (default: 0.35)
 
         Returns:
             {
@@ -411,11 +411,17 @@ Answer:"""
                 'segment_count': 0
             }
 
-        # Extract similarity scores
+        # Extract similarity scores (check original score before curation adjustments)
         similarities = []
         for seg in segments:
-            # Prioritize combined_score (has adaptive fusion) over final_score
-            score = seg.get('combined_score') or seg.get('final_score') or seg.get('text_score') or 0.0
+            # Prioritize original_combined_score (pre-curation) > combined_score > final_score > text_score
+            score = (
+                seg.get('original_combined_score') or
+                seg.get('combined_score') or
+                seg.get('final_score') or
+                seg.get('text_score') or
+                0.0
+            )
             similarities.append(score)
 
         max_sim = max(similarities) if similarities else 0.0
@@ -425,7 +431,7 @@ Answer:"""
         sufficient = max_sim >= min_similarity_threshold and avg_sim >= min_avg_similarity
 
         if not sufficient:
-            if max_sim < 0.5:
+            if max_sim < 0.35:
                 reason = f"The retrieved segments have very low relevance (max: {max_sim:.2f}). This query may be outside the scope of the video database."
             elif max_sim < min_similarity_threshold:
                 reason = f"The retrieved segments have moderate relevance (max: {max_sim:.2f}) but may not provide sufficient detail to answer accurately."
@@ -453,8 +459,8 @@ Answer:"""
         self,
         segments: List[Dict],
         query: str,
-        min_similarity_threshold: float = 0.62,
-        min_avg_similarity: float = 0.50
+        min_similarity_threshold: float = 0.45,
+        min_avg_similarity: float = 0.35
     ) -> Dict:
         """
         Assess whether retrieved segments are relevant enough to answer the query.
@@ -464,8 +470,8 @@ Answer:"""
         Args:
             segments: Retrieved segments
             query: User query
-            min_similarity_threshold: Minimum required top similarity (default: 0.62 - adjusted for BiomedCLIP limitations)
-            min_avg_similarity: Minimum required average similarity (default: 0.50)
+            min_similarity_threshold: Minimum required top similarity (default: 0.45 - lowered for better recall)
+            min_avg_similarity: Minimum required average similarity (default: 0.35)
 
         Returns:
             {
@@ -485,11 +491,17 @@ Answer:"""
                 'segment_count': 0
             }
 
-        # Extract similarity scores
+        # Extract similarity scores (check original score before curation adjustments)
         similarities = []
         for seg in segments:
-            # Prioritize combined_score (has adaptive fusion) over final_score
-            score = seg.get('combined_score') or seg.get('final_score') or seg.get('text_score') or 0.0
+            # Prioritize original_combined_score (pre-curation) > combined_score > final_score > text_score
+            score = (
+                seg.get('original_combined_score') or
+                seg.get('combined_score') or
+                seg.get('final_score') or
+                seg.get('text_score') or
+                0.0
+            )
             similarities.append(score)
 
         max_sim = max(similarities) if similarities else 0.0
@@ -499,7 +511,7 @@ Answer:"""
         sufficient = max_sim >= min_similarity_threshold and avg_sim >= min_avg_similarity
 
         if not sufficient:
-            if max_sim < 0.5:
+            if max_sim < 0.35:
                 reason = f"The retrieved segments have very low relevance (max: {max_sim:.2f}). This query may be outside the scope of the video database."
             elif max_sim < min_similarity_threshold:
                 reason = f"The retrieved segments have moderate relevance (max: {max_sim:.2f}) but may not provide sufficient detail to answer accurately."
