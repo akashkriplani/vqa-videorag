@@ -1,4 +1,4 @@
-# ENHANCING VISUAL QUESTION ANSWERING USING RETRIEVAL AUGMENTED GENERATION IN MEDICAL DOMAIN
+# Enhancing Visual Question Answering Using Retrieval Augmented Generation in Medical Domain
 
 A comprehensive Retrieval-Augmented Generation (RAG) system for answering medical questions from educational videos using state-of-the-art multimodal embeddings, hybrid search, and LLM-based answer generation.
 
@@ -831,9 +831,16 @@ result = evaluator.evaluate_answer(
 │   └── test_report_*.md
 |
 ├── EDA/                              # Contains visualizations
+|
+├── images/                           # Phase wise and system architecture
+│   ├── phase_1.png
+│   ├── phase_2.png
+│   ├── phase_3.png
+│   ├── phase_4.png
+│   ├── phase_5.png
+│   ├── System_Architecture.png
 │
 ├── requirements.txt                  # Core dependencies
-├── requirements_adaptive.txt         # Adaptive curation dependencies
 ├── .env                              # API keys (create this)
 ├── .gitignore
 ```
