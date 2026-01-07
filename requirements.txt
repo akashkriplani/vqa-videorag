@@ -1,0 +1,99 @@
+# Medical VideoRAG VQA - Requirements
+# Python 3.8+
+
+# ============================================================================
+# Video Download (YouTube)
+# ============================================================================
+pytubefix>=6.0.0
+# NOTE: Requires npm package for authenticated downloads:
+#   npm install -g youtube-po-token-generator
+#   See: https://github.com/JuanBindez/pytubefix
+
+# ============================================================================
+# Deep Learning & Embeddings
+# ============================================================================
+torch>=2.0.0
+torchvision>=0.15.0
+open-clip-torch>=2.20.0          # BiomedCLIP model
+transformers>=4.30.0             # Whisper ASR, NLI models
+
+# ============================================================================
+# Medical NLP
+# ============================================================================
+spacy>=3.5.0
+scispacy>=0.5.3
+# Install SciSpacy model separately:
+# pip install https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.5.3/en_core_sci_sm-0.5.3.tar.gz
+
+# ============================================================================
+# Vector Search
+# ============================================================================
+faiss-cpu>=1.7.4
+# For GPU: pip install faiss-gpu>=1.7.4
+
+# ============================================================================
+# Lexical Search
+# ============================================================================
+rank-bm25>=0.2.2
+
+# ============================================================================
+# LLM API
+# ============================================================================
+openai>=1.0.0
+
+# ============================================================================
+# Data Processing
+# ============================================================================
+numpy>=1.24.0
+pandas>=2.0.0
+
+# ============================================================================
+# Visualization
+# ============================================================================
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# ============================================================================
+# Computer Vision
+# ============================================================================
+opencv-python>=4.8.0
+Pillow>=10.0.0
+
+# Token counting
+tiktoken>=0.5.0
+
+# ============================================================================
+# Evaluation Metrics
+# ============================================================================
+rouge-score>=0.1.2
+nltk>=3.8.0
+scikit-learn>=1.3.0
+# Download NLTK data:
+# python -c "import nltk; nltk.download('punkt'); nltk.download('averaged_perceptron_tagger')"
+
+# ============================================================================
+# Utilities
+# ============================================================================
+python-dotenv>=1.0.0
+tqdm>=4.65.0
+
+# ============================================================================
+# System Requirements
+# ============================================================================
+# - FFmpeg must be installed system-wide for audio extraction
+#   macOS: brew install ffmpeg
+#   Ubuntu/Debian: sudo apt-get install ffmpeg
+#   Windows: https://ffmpeg.org/download.html
+#
+# - Node.js/npm for youtube-po-token-generator
+#   npm install -g youtube-po-token-generator
+
+# ============================================================================
+# Setup Instructions
+# ============================================================================
+# 1. pip install -r requirements.txt
+# 2. pip install https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.5.3/en_core_sci_sm-0.5.3.tar.gz
+# 3. python -c "import nltk; nltk.download('punkt'); nltk.download('averaged_perceptron_tagger')"
+# 4. brew install ffmpeg (macOS) or sudo apt-get install ffmpeg (Ubuntu)
+# 5. npm install -g youtube-po-token-generator
+# 6. Create .env file with: OPENAI_API_KEY=your_key_here
