@@ -644,10 +644,11 @@ python run_full_evaluation.py \
 **Retrieval**:
 
 - Recall@5, Recall@10
-- MRR (Mean Reciprocal Rank)
+- Precision@5, Precision@10
+- Mean Average Precision (mAP)
+- lized Discounted Cumulative Gain (nDCG@K)
 - Temporal IoU, Precision, Recall, F1
 - Video hit rate
-- Mean temporal distance
 
 **Generation**:
 
@@ -983,22 +984,73 @@ python hyperparameter_tuning.py
 | NVIDIA RTX 3080 (10GB) | ~8-10 hours             | ~5 min           | ~0.5-1s       |
 | Apple M1 Max (64GB)    | ~10-12 hours            | ~5 min           | ~0.5-1s       |
 
-### Retrieval Performance (Test Set, 155 queries)
+### Retrieval Performance (Test Set, 102 queries)
 
-| Configuration  | Recall@5  | MRR       | Temporal F1 | Query Cost |
-| -------------- | --------- | --------- | ----------- | ---------- |
-| Dense only     | 0.742     | 0.513     | 0.458       | $0.0003    |
-| Hybrid (α=0.3) | **0.789** | **0.567** | **0.512**   | $0.0003    |
-| BM25 only      | 0.681     | 0.429     | 0.391       | $0.0003    |
+### Ranking Metrics
 
-### Answer Quality (GPT-4o-mini)
+| Metric      | Mean   | Std    | Median | Min    | Max    |
+| ----------- | ------ | ------ | ------ | ------ | ------ |
+| Recall@5    | 0.6471 | 0.4779 | 1.0000 | 0.0000 | 1.0000 |
+| Recall@10   | 0.6471 | 0.4779 | 1.0000 | 0.0000 | 1.0000 |
+| Precision@5 | 0.1569 | 0.1361 | 0.2000 | 0.0000 | 0.6000 |
+| mAP         | 0.3961 | 0.4032 | 0.2500 | 0.0000 | 1.0000 |
+| nDCG@10     | 0.4604 | 0.4019 | 0.4307 | 0.0000 | 1.0000 |
 
-| Metric                | Mean     | Std      |
-| --------------------- | -------- | -------- |
-| ROUGE-L               | 0.387    | 0.142    |
-| Confidence            | 0.783    | 0.118    |
-| Answer Length (words) | 187.3    | 42.6     |
-| Cost per Query        | $0.00042 | $0.00013 |
+### Temporal Accuracy
+
+| Metric             | Mean   | Std    | Median |
+| ------------------ | ------ | ------ | ------ |
+| IoU                | 0.0751 | 0.0703 | 0.0564 |
+| Temporal Precision | 0.1834 | 0.1802 | 0.1261 |
+| Temporal Recall    | 0.1254 | 0.1230 | 0.0940 |
+| Temporal F1        | 0.1321 | 0.1164 | 0.1068 |
+
+**Correct Video Retrieved Rate:** 96.08%
+
+---
+
+Context Curation Performance
+
+| Metric                 | Mean   | Std    | Median  |
+| ---------------------- | ------ | ------ | ------- |
+| Pass Rate              | 95.98% | 0.1323 | 100.00% |
+| Reduction Rate         | 85.49% | 0.0517 | 90.00%  |
+| Avg Conflicts Detected | 3.25   | 3.43   | 2       |
+
+---
+
+Answer Generation Performance
+
+| Metric                | Mean      | Std       | Median    |
+| --------------------- | --------- | --------- | --------- |
+| Confidence            | 32.18%    | 0.1636    | 30.00%    |
+| Answer Length (words) | 122.8     | 67.6      | 161       |
+| Tokens Used           | 562.6     | 113.9     | 586       |
+| Cost per Query        | $0.000160 | $0.000059 | $0.000193 |
+
+**Answer Generation Success Rate:** 100.00%
+**Total Estimated Cost:** $0.0163
+
+---
+
+Performance Timing
+
+| Metric              | Mean | Std  | Median |
+| ------------------- | ---- | ---- | ------ |
+| Search Time (s)     | 0.18 | 0.16 | 0.15   |
+| Generation Time (s) | 8.80 | 3.34 | 9.98   |
+| Total Time (s)      | 8.98 | 3.34 | 10.14  |
+
+**Total Evaluation Time:** 15.3 minutes
+
+---
+
+## Summary
+
+- **Queries Processed:** 102
+- **Average Performance:** 13.21% Temporal F1
+- **Answer Quality:** 32.18% Confidence
+- **Cost Efficiency:** $0.000160 per query
 
 ---
 
