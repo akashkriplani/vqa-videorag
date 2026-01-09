@@ -643,8 +643,8 @@ python run_full_evaluation.py \
 
 **Retrieval**:
 
-- Recall@5, Recall@10
-- Precision@5, Precision@10
+- Recall@K
+- Precision@K
 - Mean Average Precision (mAP)
 - lized Discounted Cumulative Gain (nDCG@K)
 - Temporal IoU, Precision, Recall, F1
@@ -839,6 +839,7 @@ result = evaluator.evaluate_answer(
 │   ├── phase_3.png
 │   ├── phase_4.png
 │   ├── phase_5.png
+|   ├── phase_6.png
 │   ├── System_Architecture.png
 │
 ├── requirements.txt                  # Core dependencies
