@@ -529,24 +529,24 @@ def aggregate_statistics(results: List[Dict]) -> Dict:
     }
 
 
-def save_results(results: List[Dict], summary: Dict, output_dir: str, split: str):
+def save_results(results: List[Dict], summary: Dict, output_dir: str, split: str, timestamp: str):
     """Save evaluation results and summary."""
     Path(output_dir).mkdir(parents=True, exist_ok=True)
 
     # Save detailed results
-    results_file = os.path.join(output_dir, f'evaluation_results_{split}.json')
+    results_file = os.path.join(output_dir, f'evaluation_results_{split}_{timestamp}.json')
     with open(results_file, 'w') as f:
         json.dump(results, f, indent=2)
     print(f"\n✅ Detailed results saved to: {results_file}")
 
     # Save summary
-    summary_file = os.path.join(output_dir, f'evaluation_summary_{split}.json')
+    summary_file = os.path.join(output_dir, f'evaluation_summary_{split}_{timestamp}.json')
     with open(summary_file, 'w') as f:
         json.dump(summary, f, indent=2)
     print(f"✅ Summary statistics saved to: {summary_file}")
 
     # Generate markdown report
-    report_file = os.path.join(output_dir, f'evaluation_report_{split}.md')
+    report_file = os.path.join(output_dir, f'evaluation_report_{split}_{timestamp}.md')
     with open(report_file, 'w') as f:
         f.write(generate_report(summary, split, len(results)))
     print(f"✅ Human-readable report saved to: {report_file}")
@@ -660,6 +660,9 @@ def main():
 
     args = parser.parse_args()
 
+    # Generate timestamp for this evaluation run
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+
     print("\n" + "="*80)
     print("MEDICAL VIDEORAG - FULL EVALUATION")
     print("="*80)
@@ -726,7 +729,7 @@ def main():
 
             # Checkpoint
             if (i + 1) % args.checkpoint_interval == 0:
-                checkpoint_file = os.path.join(args.output_dir, f'checkpoint_{args.split}_{i+1}.json')
+                checkpoint_file = os.path.join(args.output_dir, f'checkpoint_{args.split}_{timestamp}_{i+1}.json')
                 Path(args.output_dir).mkdir(parents=True, exist_ok=True)
                 with open(checkpoint_file, 'w') as f:
                     json.dump(results, f, indent=2)
@@ -769,7 +772,7 @@ def main():
     }
 
     # Save results
-    save_results(results, summary, args.output_dir, args.split)
+    save_results(results, summary, args.output_dir, args.split, timestamp)
 
     print("\n" + "="*80)
     print("All results saved successfully!")

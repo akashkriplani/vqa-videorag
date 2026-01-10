@@ -136,8 +136,7 @@ The system operates in **6 phases**:
 ### 1. Clone Repository
 
 ```bash
-git clone <repository-url>
-cd <repository-directory>
+git clone https://github.com/akashkriplani/vqa-videorag.git
 ```
 
 ### 2. Create Python Environment
@@ -181,12 +180,6 @@ npm install -g youtube-po-token-generator
 
 ```bash
 pip install -r requirements.txt
-```
-
-**With Adaptive Context Curation:**
-
-```bash
-pip install -r requirements_adaptive.txt
 ```
 
 **Install SciSpacy Model:**
@@ -273,8 +266,8 @@ If you already have FAISS indices:
 
 ```bash
 python query_faiss.py \
-  --query "How to do CPR on an infant?" \
-  --split test \
+  --query "How to do a mouth cancer check at home?" \
+  --split train \
   --hybrid \
   --alpha 0.3 \
   --enable_curation \
@@ -478,8 +471,8 @@ python embedding_storage.py \
 
 ```bash
 python query_faiss.py \
-  --query "How to perform CPR on an infant?" \
-  --split test \
+  --query "How to do a mouth cancer check at home?" \
+  --split train \
   --final_k 10
 ```
 
@@ -488,7 +481,7 @@ python query_faiss.py \
 ```bash
 python query_faiss.py \
   --query "How to do a mouth cancer check at home?" \
-  --split test \
+  --split train \
   --hybrid \
   --alpha 0.3 \
   --fusion linear \
@@ -635,9 +628,10 @@ python run_full_evaluation.py \
 **Output**:
 
 - `evaluation_results/` directory:
-  - `{split}_results_{timestamp}.json` - Detailed per-query results
-  - `{split}_summary_{timestamp}.json` - Aggregated statistics
-  - `{split}_report_{timestamp}.md` - Human-readable report
+  - `evaluation_results_{split}_{timestamp}.json` - Detailed per-query results
+  - `evaluation_summary__{split}_{timestamp}.json` - Aggregated statistics
+  - `evaluation_report_{split}_{timestamp}.md` - Human-readable report
+  - `checkpoint_{split}_{timestamp}_{query_count}`.json - For certain checkpoints in multiples of 50
 
 **Metrics Reported**:
 
@@ -827,9 +821,9 @@ result = evaluator.evaluate_answer(
 │   └── visual_test.index.meta.json
 │
 ├── evaluation_results/               # Evaluation outputs
-│   ├── test_results_*.json
-│   ├── test_summary_*.json
-│   └── test_report_*.md
+│   ├── evaluation_results_*.json
+│   ├── evaluation_summary_*.json
+│   └── evaluation_report_*.md
 |
 ├── EDA/                              # Contains visualizations
 |
