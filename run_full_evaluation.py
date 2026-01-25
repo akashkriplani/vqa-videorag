@@ -403,6 +403,17 @@ class FullEvaluator:
 
     def extract_curation_metrics(self, curation_stats: Dict) -> Dict:
         """Extract curation-specific metrics."""
+        # Handle case when curation is disabled (curation_stats is None)
+        if curation_stats is None:
+            return {
+                'input_count': 0,
+                'passed_quality_filter': 0,
+                'final_selected': 0,
+                'pass_rate': 0.0,
+                'reduction_rate': 0.0,
+                'conflicts_detected': 0
+            }
+
         input_count = curation_stats.get('input_segments', 0)
         passed_quality = curation_stats.get('after_quality_filter', 0)
         final_selected = curation_stats.get('final_selected', 0)
@@ -639,10 +650,10 @@ def main():
                        help="Dataset split to evaluate")
     parser.add_argument("--alpha", type=float, default=0.3,
                        help="Weight for dense retrieval in hybrid search (default: 0.3)")
-    parser.add_argument("--enable-curation", action="store_true", default=True,
-                       help="Enable adaptive context selection (default: True)")
-    parser.add_argument("--enable-attribution", action="store_true", default=True,
-                       help="Enable self-reflection attribution (default: True)")
+    parser.add_argument("--enable-curation", action="store_true", default=False,
+                       help="Enable adaptive context selection (default: False)")
+    parser.add_argument("--enable-attribution", action="store_true", default=False,
+                       help="Enable self-reflection attribution (default: False)")
     parser.add_argument("--quality-threshold", type=float, default=0.1,
                        help="Minimum quality score for context filtering (default: 0.1)")
     parser.add_argument("--local-k", type=int, default=50,
