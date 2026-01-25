@@ -128,7 +128,7 @@ def process_video_batch(batch_fnames, video_dir, text_feat_dir, visual_feat_dir,
 
     return batch_results
 
-def parallel_process_videos(fnames, video_dir, text_feat_dir, visual_feat_dir, asr_model_id="openai/whisper-tiny", batch_size=1, max_workers=2):
+def parallel_process_videos(fnames, video_dir, text_feat_dir, visual_feat_dir, asr_model_id="openai/whisper-tiny", batch_size=1, max_workers=2, **processor_kwargs):
     """
     Full pipeline parallel processing with batching: ASR, NER, embedding, JSON saving.
     """
@@ -138,7 +138,7 @@ def parallel_process_videos(fnames, video_dir, text_feat_dir, visual_feat_dir, a
     total = len(fnames)
     processed = 0
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
-        futures = {executor.submit(process_video_batch, batch, video_dir, text_feat_dir, visual_feat_dir, asr_model_id): tuple(batch) for batch in batches}
+        futures = {executor.submit(process_video_batch, batch, video_dir, text_feat_dir, visual_feat_dir, asr_model_id, **processor_kwargs): tuple(batch) for batch in batches}
         for fut in as_completed(futures):
             batch_result = fut.result()
             for fname, (text, visual, error) in batch_result.items():
@@ -445,7 +445,14 @@ def process_split(split, video_dir, text_feat_dir, visual_feat_dir, faiss_text_p
     max_workers = 2 if torch.cuda.is_available() or torch.backends.mps.is_available() else os.cpu_count()
     if ENABLE_PARALLEL:
         print(f"Parallel processing enabled: batch_size={batch_size}, max_workers={max_workers}")
-        results = parallel_process_videos(fnames, video_dir, text_feat_dir, visual_feat_dir, batch_size=batch_size, max_workers=max_workers)
+        results = parallel_process_videos(fnames, video_dir, text_feat_dir, visual_feat_dir, batch_size=batch_size, max_workers=max_workers,
+                                         window_size=window_size, stride=stride,
+                                         min_coverage_contribution=min_coverage_contribution,
+                                         deduplication_mode=deduplication_mode,
+                                         frames_per_segment=frames_per_segment,
+                                         sampling_strategy=sampling_strategy,
+                                         quality_filter=quality_filter,
+                                         aggregation_method=aggregation_method)
         for fname in fnames:
             text, visual = results.get(fname, (None, None))
             if text and all(item is not None for item in text):
@@ -539,7 +546,9 @@ def main():
             text_feat_dir=f"feature_extraction/textual/{split}",
             visual_feat_dir=f"feature_extraction/visual/{split}",
             faiss_text_path=f"faiss_db/textual_{split}.index",
-            faiss_visual_path=f"faiss_db/visual_{split}.index"
+            faiss_visual_path=f"faiss_db/visual_{split}.index",
+            window_size=256,
+            stride=192,
         )
 
     # After all splits are processed, filter JSON files based on successfully generated embeddings
