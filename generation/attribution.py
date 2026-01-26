@@ -318,28 +318,42 @@ class SelfReflectionAttribution:
         """
         Assess support level for a claim.
 
-        Levels:
-        - HIGH: Strong semantic similarity (>0.7)
-        - MEDIUM: Moderate similarity (0.5-0.7)
-        - LOW: Weak similarity (0.3-0.5)
-        - UNSUPPORTED: No good match (<0.3)
+        Levels (ADJUSTED for medical domain with paraphrasing):
+        - HIGH: Strong semantic similarity (>0.5, down from 0.7)
+        - MEDIUM: Moderate similarity (0.35-0.5, down from 0.5-0.7)
+        - LOW: Weak similarity (0.25-0.35, down from 0.3-0.5)
+        - UNSUPPORTED: No good match (<0.25, down from 0.3)
+
+        Rationale: Medical content often uses technical paraphrasing,
+        so lower thresholds better capture semantic equivalence.
         """
-        if not segment or similarity < 0.3:
+        if not segment or similarity < 0.25:
             return 'UNSUPPORTED'
 
-        # Check for exact phrase match
+        # Check for exact phrase match or strong keyword overlap
         text_evidence = segment.get('text_evidence', {})
         if text_evidence:
             seg_text = text_evidence.get('text', '').lower()
-            if claim.lower() in seg_text or seg_text in claim.lower():
+            claim_lower = claim.lower()
+
+            # Exact phrase match
+            if claim_lower in seg_text or seg_text in claim_lower:
                 return 'HIGH'
 
-        # Use similarity thresholds
-        if similarity >= 0.7:
+            # Strong keyword overlap (medical terms often have shared key terms)
+            claim_words = set(claim_lower.split())
+            seg_words = set(seg_text.split())
+            if len(claim_words) > 3:
+                overlap = len(claim_words & seg_words)
+                if overlap / len(claim_words) > 0.6:  # 60%+ keyword overlap
+                    return 'HIGH'
+
+        # Use relaxed similarity thresholds for medical domain
+        if similarity >= 0.5:  # Lowered from 0.7
             return 'HIGH'
-        elif similarity >= 0.5:
+        elif similarity >= 0.35:  # Lowered from 0.5
             return 'MEDIUM'
-        elif similarity >= 0.3:
+        elif similarity >= 0.25:  # Lowered from 0.3
             return 'LOW'
         else:
             return 'UNSUPPORTED'
@@ -394,10 +408,10 @@ class SelfReflectionAttribution:
         total_claims = len(attribution_map)
         confidence = (
             support_counts['HIGH'] * 1.0 +
-            support_counts['MEDIUM'] * 0.7 +
-            support_counts['LOW'] * 0.4 +
+            support_counts['MEDIUM'] * 0.75 +  # Increased from 0.7
+            support_counts['LOW'] * 0.5 +      # Increased from 0.4
             support_counts['UNSUPPORTED'] * 0.0 +
-            support_counts['CONFLICTED'] * 0.3
+            support_counts['CONFLICTED'] * 0.6  # Increased from 0.3 - conflicts still provide value
         ) / total_claims if total_claims > 0 else 0.0
 
         return {

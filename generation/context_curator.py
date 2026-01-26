@@ -102,24 +102,25 @@ class ContextSelector:
             print("   Entity overlap scoring will be limited")
 
         # Selection strategies by query type
+        # Increased max_segments to provide LLM with sufficient context
         self.selection_strategies = {
             'procedural': {
-                'max_segments': 5,
+                'max_segments': 7,  # Increased from 5 to provide more complete procedures
                 'prioritize': 'top_score',  # Changed from temporal_order to preserve quality
                 'diversity_threshold': 0.85
             },
             'diagnostic': {
-                'max_segments': 6,
+                'max_segments': 7,  # Increased from 6 to capture more diagnostic perspectives
                 'prioritize': 'diversity',
                 'diversity_threshold': 0.70
             },
             'factoid': {
-                'max_segments': 2,
+                'max_segments': 3,  # Increased from 2 to provide more comprehensive answers
                 'prioritize': 'top_score',
                 'diversity_threshold': 0.95
             },
             'general': {
-                'max_segments': 3,
+                'max_segments': 5,  # Increased from 3 to give LLM more context
                 'prioritize': 'top_score',  # Changed from balanced to top_score
                 'diversity_threshold': 0.80
             }
@@ -382,6 +383,10 @@ class ContextSelector:
         """
         Detect and resolve contradictions across segments.
 
+        NEW STRATEGY: Instead of removing segments, just flag conflicts.
+        Let the LLM handle nuanced contradictions and provide balanced answers.
+        Only remove in extreme cases (very high contradiction scores).
+
         Returns:
             (cleaned_segments, conflicts_detected)
         """
@@ -402,20 +407,33 @@ class ContextSelector:
                             segments[j].get('segment_id')
                         ],
                         'description': self._describe_conflict(conflict_type, segments[i], segments[j]),
-                        'resolution': 'Removed lower-scored segment'
+                        'resolution': 'Flagged for LLM consideration'
                     }
                     conflicts.append(conflict)
 
-                    # Remove lower-scored segment
-                    score_i = segments[i].get('final_score', segments[i].get('relevance_score', 0.0))
-                    score_j = segments[j].get('final_score', segments[j].get('relevance_score', 0.0))
+                    # Mark segments with conflict flag instead of removing
+                    # Only remove if VERY high contradiction probability
+                    extreme_contradiction = False
+                    if conflict_type == 'nli_contradiction':
+                        nli_i = segments[i].get('nli_contradiction', 0.0)
+                        nli_j = segments[j].get('nli_contradiction', 0.0)
+                        if nli_i > 0.9 or nli_j > 0.9:  # Only remove if >90% certain
+                            extreme_contradiction = True
 
-                    if score_i < score_j:
-                        segments_to_remove.add(i)
+                    if extreme_contradiction:
+                        score_i = segments[i].get('final_score', segments[i].get('relevance_score', 0.0))
+                        score_j = segments[j].get('final_score', segments[j].get('relevance_score', 0.0))
+                        if score_i < score_j:
+                            segments_to_remove.add(i)
+                        else:
+                            segments_to_remove.add(j)
+                        conflict['resolution'] = 'Removed lower-scored segment (extreme contradiction)'
                     else:
-                        segments_to_remove.add(j)
+                        # Just flag for awareness, don't remove
+                        segments[i]['has_conflict'] = True
+                        segments[j]['has_conflict'] = True
 
-        # Remove conflicting segments
+        # Remove only extreme conflicting segments
         cleaned_segments = [seg for i, seg in enumerate(segments) if i not in segments_to_remove]
 
         return cleaned_segments, conflicts
@@ -645,9 +663,10 @@ class ContextSelector:
         if not text_i or not text_j:
             return None
 
-        # Check NLI contradiction
+        # Check NLI contradiction - MUCH stricter threshold (0.6 -> 0.8)
+        # Medical content often discusses alternatives which aren't contradictions
         if 'nli_contradiction' in seg_i and 'nli_contradiction' in seg_j:
-            if seg_i['nli_contradiction'] > 0.6 or seg_j['nli_contradiction'] > 0.6:
+            if seg_i['nli_contradiction'] > 0.8 or seg_j['nli_contradiction'] > 0.8:
                 return 'nli_contradiction'
 
         # Check negation patterns
@@ -661,8 +680,19 @@ class ContextSelector:
         return None
 
     def _has_negation_conflict(self, text_i: str, text_j: str) -> bool:
-        """Check for negation conflicts (STRICTER - avoid false positives)"""
+        """Check for negation conflicts (VERY CONSERVATIVE - avoid false positives)"""
+        # In medical videos, different techniques/approaches are often described
+        # This is NOT a contradiction - it's complementary information
+        # Only flag as conflict if we have clear contradictory negation patterns
+
         negation_words = {'not', 'never', 'avoid', "don't", 'do not', 'no', 'cannot', "can't"}
+
+        # Medical context where negation is expected and NOT a contradiction
+        medical_contexts = {
+            'alternative', 'different', 'another', 'other', 'also', 'additionally',
+            'instead', 'however', 'alternatively', 'option', 'method', 'approach',
+            'technique', 'way', 'step', 'procedure', 'treatment', 'therapy'
+        }
 
         words_i = set(re.findall(r'\b[a-z]+\b', text_i.lower()))
         words_j = set(re.findall(r'\b[a-z]+\b', text_j.lower()))
@@ -670,14 +700,18 @@ class ContextSelector:
         has_neg_i = bool(negation_words & words_i)
         has_neg_j = bool(negation_words & words_j)
 
+        # If medical context words present, likely not a real contradiction
+        if medical_contexts & (words_i | words_j):
+            return False
+
         # XOR: one has negation, other doesn't, but similar words
         if has_neg_i != has_neg_j:
             common_words = (words_i - negation_words) & (words_j - negation_words)
-            # Increased threshold from 5 to 20 to reduce false positives
-            # Also require high overlap ratio
-            if len(common_words) > 20:
+            # MUCH stricter: require very high word overlap (40+ common words)
+            # AND very high overlap ratio (70%+) to flag as contradiction
+            if len(common_words) > 40:
                 overlap_ratio = len(common_words) / min(len(words_i), len(words_j))
-                if overlap_ratio > 0.5:  # At least 50% word overlap
+                if overlap_ratio > 0.7:  # At least 70% word overlap
                     return True
 
         return False
