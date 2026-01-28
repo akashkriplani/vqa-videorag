@@ -559,8 +559,8 @@ def main():
             window_size=256,
             stride=64,
             aggregation_method='mean',
-            deduplication_mode='coverage',
-            enable_visual_deduplication=True
+            deduplication_mode='none',
+            enable_visual_deduplication=False
         )
 
     # After all splits are processed, filter JSON files based on successfully generated embeddings

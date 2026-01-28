@@ -30,7 +30,7 @@ This project implements a **Medical VideoRAG** system that processes medical edu
 ### 🔍 Multimodal Processing
 
 - **Automatic Speech Recognition**: OpenAI Whisper (tiny) for fast, accurate medical transcription
-- **Text Embeddings**: BiomedCLIP text encoder with sliding window segmentation (256 tokens, 192 stride)
+- **Text Embeddings**: BiomedCLIP text encoder with sliding window segmentation (256 tokens, 64 stride)
 - **Visual Embeddings**: BiomedCLIP vision encoder with adaptive frame sampling
 - **Medical NER**: SciSpacy entity recognition for medical terminology extraction
 
@@ -51,7 +51,7 @@ This project implements a **Medical VideoRAG** system that processes medical edu
 ### 📊 Comprehensive Evaluation
 
 - **Retrieval Metrics**: Recall@K, MRR, temporal IoU/F1, video hit rate
-- **Generation Metrics**: ROUGE-L, answer quality, confidence scores
+- **Generation Metrics**: Answer quality, confidence scores
 - **Performance Timing**: End-to-end latency tracking
 - **Cost Tracking**: Token usage and API cost estimation
 
@@ -143,7 +143,7 @@ git clone https://github.com/akashkriplani/vqa-videorag.git
 
 ```bash
 # Using conda (recommended)
-conda create -n medvidrag python=3.8
+conda create -n medvidrag python=3.11
 conda activate medvidrag
 
 # OR using venv
@@ -373,7 +373,7 @@ process_split(
 
     # Text embedding parameters
     window_size=256,              # Token window size
-    stride=192,                   # Overlap (192 = 75% overlap)
+    stride=64,                   # Overlap (64 = 75% overlap)
     min_coverage_contribution=0.05,  # Min new coverage to keep window
     deduplication_mode='coverage',   # 'coverage', 'similarity', 'aggressive', 'none'
 
@@ -381,7 +381,8 @@ process_split(
     frames_per_segment=2,         # Frames extracted per segment
     sampling_strategy='adaptive',  # 'uniform', 'adaptive', 'quality_based'
     quality_filter=False,         # Enable frame quality filtering
-    aggregation_method='mean'     # 'mean' or 'max' for multi-frame pooling
+    aggregation_method='mean'     # 'mean' or 'max' for multi-frame pooling,
+    enable_visual_deduplication=True
 )
 ```
 
@@ -679,8 +680,8 @@ python hyperparameter_tuning.py
 ```python
 HYPERPARAMETER_GRID = {
     # Text parameters
-    'window_size': [128, 256, 512],
-    'stride': [96, 192, 384],
+    'window_size': [256, 512],
+    'stride': [64, 192],
     'deduplication_mode': ['coverage', 'similarity', 'none'],
 
     # Visual parameters
@@ -860,7 +861,7 @@ HF_TOKEN=hf_...                       # HuggingFace token (for BiomedCLIP)
 **Text Embeddings**:
 
 - `window_size=256` - Token window size
-- `stride=192` - Overlap (75% overlap = stride/window)
+- `stride=64` - Overlap (75% overlap = stride/window)
 - `min_coverage_contribution=0.05` - Min new coverage threshold
 - `deduplication_mode='coverage'` - 'coverage', 'similarity', 'aggressive', 'none'
 
