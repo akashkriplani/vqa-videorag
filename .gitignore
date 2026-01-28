@@ -190,3 +190,4 @@ feature_extraction/*
 
 faiss_db/*
 
+evaluation_results/*
