@@ -90,6 +90,7 @@ def process_video_batch(batch_fnames, video_dir, text_feat_dir, visual_feat_dir,
         sampling_strategy=processor_kwargs.get('sampling_strategy', 'adaptive'),
         quality_filter=processor_kwargs.get('quality_filter', False),
         aggregation_method=processor_kwargs.get('aggregation_method', 'mean'),
+        enable_visual_deduplication=processor_kwargs.get('enable_visual_deduplication', True),
         visual_similarity_threshold=processor_kwargs.get('visual_similarity_threshold', 0.98)
     )
 
@@ -156,7 +157,8 @@ def parallel_process_videos(fnames, video_dir, text_feat_dir, visual_feat_dir, a
 def demo_pipeline(video_path, text_feat_dir, visual_feat_dir, faiss_text_path, faiss_visual_path,
                  window_size=256, stride=192, min_coverage_contribution=0.05,
                  deduplication_mode='coverage', frames_per_segment=2,
-                 sampling_strategy='adaptive', quality_filter=False, aggregation_method='mean'):
+                 sampling_strategy='adaptive', quality_filter=False, aggregation_method='mean',
+                 enable_visual_deduplication=True):
     """
     Demo pipeline with configurable hyperparameters using refactored VideoProcessor.
 
@@ -171,6 +173,7 @@ def demo_pipeline(video_path, text_feat_dir, visual_feat_dir, faiss_text_path, f
         sampling_strategy: 'uniform', 'adaptive', or 'quality_based' (default: 'adaptive')
         quality_filter: Enable frame quality filtering (default: False)
         aggregation_method: 'mean' or 'max' (default: 'mean')
+        enable_visual_deduplication: Enable visual deduplication (default: True)
     """
     os.makedirs(text_feat_dir, exist_ok=True)
     os.makedirs(visual_feat_dir, exist_ok=True)
@@ -198,7 +201,8 @@ def demo_pipeline(video_path, text_feat_dir, visual_feat_dir, faiss_text_path, f
         frames_per_segment=frames_per_segment,
         sampling_strategy=sampling_strategy,
         quality_filter=quality_filter,
-        aggregation_method=aggregation_method
+        aggregation_method=aggregation_method,
+        enable_visual_deduplication=enable_visual_deduplication
     )
 
     # Process video with VideoProcessor
@@ -392,7 +396,8 @@ def demo_pipeline(video_path, text_feat_dir, visual_feat_dir, faiss_text_path, f
 def process_video(fname, video_dir, text_feat_dir, visual_feat_dir,
                  window_size=256, stride=192, min_coverage_contribution=0.05,
                  deduplication_mode='coverage', frames_per_segment=2,
-                 sampling_strategy='adaptive', quality_filter=False, aggregation_method='mean'):
+                 sampling_strategy='adaptive', quality_filter=False, aggregation_method='mean',
+                 enable_visual_deduplication=True):
     """
     Process a single video with configurable hyperparameters.
     See demo_pipeline docstring for parameter descriptions.
@@ -411,7 +416,8 @@ def process_video(fname, video_dir, text_feat_dir, visual_feat_dir,
         frames_per_segment=frames_per_segment,
         sampling_strategy=sampling_strategy,
         quality_filter=quality_filter,
-        aggregation_method=aggregation_method
+        aggregation_method=aggregation_method,
+        enable_visual_deduplication=enable_visual_deduplication
     )
 
     processor = VideoProcessor(config)
@@ -426,7 +432,8 @@ def process_video(fname, video_dir, text_feat_dir, visual_feat_dir,
 def process_split(split, video_dir, text_feat_dir, visual_feat_dir, faiss_text_path, faiss_visual_path,
                  window_size=256, stride=192, min_coverage_contribution=0.05,
                  deduplication_mode='coverage', frames_per_segment=2,
-                 sampling_strategy='adaptive', quality_filter=False, aggregation_method='mean'):
+                 sampling_strategy='adaptive', quality_filter=False, aggregation_method='mean',
+                 enable_visual_deduplication=True):
     """
     Process a full split (train/val/test) with configurable hyperparameters.
 
@@ -452,7 +459,8 @@ def process_split(split, video_dir, text_feat_dir, visual_feat_dir, faiss_text_p
                                          frames_per_segment=frames_per_segment,
                                          sampling_strategy=sampling_strategy,
                                          quality_filter=quality_filter,
-                                         aggregation_method=aggregation_method)
+                                         aggregation_method=aggregation_method,
+                                         enable_visual_deduplication=enable_visual_deduplication)
         for fname in fnames:
             text, visual = results.get(fname, (None, None))
             if text and all(item is not None for item in text):
@@ -479,7 +487,8 @@ def process_split(split, video_dir, text_feat_dir, visual_feat_dir, faiss_text_p
                 frames_per_segment=frames_per_segment,
                 sampling_strategy=sampling_strategy,
                 quality_filter=quality_filter,
-                aggregation_method=aggregation_method
+                aggregation_method=aggregation_method,
+                enable_visual_deduplication=enable_visual_deduplication
             )
             if text:
                 all_text_embs.extend(text[0])
@@ -548,7 +557,10 @@ def main():
             faiss_text_path=f"faiss_db/textual_{split}.index",
             faiss_visual_path=f"faiss_db/visual_{split}.index",
             window_size=256,
-            stride=192,
+            stride=64,
+            aggregation_method='mean',
+            deduplication_mode='coverage',
+            enable_visual_deduplication=True
         )
 
     # After all splits are processed, filter JSON files based on successfully generated embeddings
