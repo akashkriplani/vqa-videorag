@@ -147,7 +147,7 @@ def extract_frames_and_embed(
 
             results.append({
                 "video_id": video_id,
-                "segment_id": segment_id,  # NEW: Link to text segment
+                "segment_id": segment_id,  # Segment ID for linking text and visual
                 "timestamp": ts,
                 "frame_path": "in-memory",
                 "num_frames_averaged": len(embeddings),

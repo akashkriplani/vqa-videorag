@@ -196,7 +196,7 @@ def extract_entities_and_embed_optimized(
 
         results.append({
             "video_id": video_id,
-            "segment_id": segment_id,  # NEW: for linking text and visual
+            "segment_id": segment_id,  # Segment ID for linking text and visual
             "window_id": window_idx,
             "timestamp": representative_ts,
             "text": window_text,

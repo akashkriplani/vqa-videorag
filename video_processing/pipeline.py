@@ -30,8 +30,8 @@ class VideoProcessorConfig:
         sampling_strategy='quality_based',  # Changed from 'adaptive' for better frame selection
         quality_filter=True,            # Enable quality filtering
         aggregation_method='max',       # Changed from 'mean' to capture best frame
-        min_frames=3,                   # NEW: Minimum frames for short segments
-        max_frames=12,                  # NEW: Maximum frames for long segments
+        min_frames=3,                   # Minimum frames for short segments
+        max_frames=12,                  # Maximum frames for long segments
         # Visual deduplication config
         enable_visual_deduplication=True,  # Enable/disable visual deduplication
         visual_similarity_threshold=0.98
