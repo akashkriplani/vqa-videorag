@@ -23,7 +23,7 @@ This project implements a **Medical VideoRAG** system that processes medical edu
 
 **Key Innovation**: Combines dense semantic search (BiomedCLIP embeddings) with sparse lexical search (BM25) for optimal retrieval in the medical domain, enhanced with adaptive context curation and self-reflection attribution.
 
-**Dataset**: Built on the [MedVidQA dataset](https://github.com/deepaknlp/MedVidQA) - 800+ medical YouTube videos with 3,000+ question-answer pairs.
+**Dataset**: Built on the [MedVidQA dataset](https://medvidqa.github.io) - 800+ medical YouTube videos with 3,000+ question-answer pairs.
 
 ## ✨ Key Features
 
