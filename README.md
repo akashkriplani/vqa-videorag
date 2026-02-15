@@ -986,32 +986,32 @@ python hyperparameter_tuning.py
 
 | Metric      | Mean   | Std    | Median | Min    | Max    |
 | ----------- | ------ | ------ | ------ | ------ | ------ |
-| Recall@5    | 0.6471 | 0.4779 | 1.0000 | 0.0000 | 1.0000 |
-| Recall@10   | 0.6471 | 0.4779 | 1.0000 | 0.0000 | 1.0000 |
-| Precision@5 | 0.1569 | 0.1361 | 0.2000 | 0.0000 | 0.6000 |
-| mAP         | 0.3961 | 0.4032 | 0.2500 | 0.0000 | 1.0000 |
-| nDCG@10     | 0.4604 | 0.4019 | 0.4307 | 0.0000 | 1.0000 |
+| Recall@5    | 0.6569 | 0.4748 | 1.0000 | 0.0000 | 1.0000 |
+| Recall@10   | 0.6569 | 0.4748 | 1.0000 | 0.0000 | 1.0000 |
+| Precision@5 | 0.2353 | 0.2350 | 0.2000 | 0.0000 | 1.0000 |
+| mAP         | 0.2828 | 0.3459 | 0.1429 | 0.0000 | 1.0000 |
+| nDCG@10     | 0.3783 | 0.3512 | 0.3333 | 0.0000 | 1.0000 |
 
 ### Temporal Accuracy
 
 | Metric             | Mean   | Std    | Median |
 | ------------------ | ------ | ------ | ------ |
-| IoU                | 0.0751 | 0.0703 | 0.0564 |
-| Temporal Precision | 0.1834 | 0.1802 | 0.1261 |
-| Temporal Recall    | 0.1254 | 0.1230 | 0.0940 |
-| Temporal F1        | 0.1321 | 0.1164 | 0.1068 |
+| IoU                | 0.0921 | 0.0832 | 0.0820 |
+| Temporal Precision | 0.2077 | 0.1965 | 0.1572 |
+| Temporal Recall    | 0.1528 | 0.1328 | 0.1403 |
+| Temporal F1        | 0.1586 | 0.1315 | 0.1516 |
 
-**Correct Video Retrieved Rate:** 96.08%
+**Correct Video Retrieved Rate:** 94.12%
 
 ---
 
 Context Curation Performance
 
-| Metric                 | Mean   | Std    | Median  |
-| ---------------------- | ------ | ------ | ------- |
-| Pass Rate              | 95.98% | 0.1323 | 100.00% |
-| Reduction Rate         | 85.49% | 0.0517 | 90.00%  |
-| Avg Conflicts Detected | 3.25   | 3.43   | 2       |
+| Metric                 | Mean  | Std    | Median |
+| ---------------------- | ----- | ------ | ------ |
+| Pass Rate              | 0.00% | 0.0000 | 0.00%  |
+| Reduction Rate         | 0.00% | 0.0000 | 0.00%  |
+| Avg Conflicts Detected | 0.00  | 0.000  | 0.0    |
 
 ---
 
@@ -1019,13 +1019,13 @@ Answer Generation Performance
 
 | Metric                | Mean      | Std       | Median    |
 | --------------------- | --------- | --------- | --------- |
-| Confidence            | 32.18%    | 0.1636    | 30.00%    |
-| Answer Length (words) | 122.8     | 67.6      | 161       |
-| Tokens Used           | 562.6     | 113.9     | 586       |
-| Cost per Query        | $0.000160 | $0.000059 | $0.000193 |
+| Confidence            | 48.78%    | 0.2922    | 55.48%    |
+| Answer Length (words) | 104.8     | 62.9      | 145       |
+| Tokens Used           | 561.5     | 322.3     | 766       |
+| Cost per Query        | $0.000145 | $0.000095 | $0.000205 |
 
 **Answer Generation Success Rate:** 100.00%
-**Total Estimated Cost:** $0.0163
+**Total Estimated Cost:** $0.0148
 
 ---
 
@@ -1033,11 +1033,11 @@ Performance Timing
 
 | Metric              | Mean | Std  | Median |
 | ------------------- | ---- | ---- | ------ |
-| Search Time (s)     | 0.18 | 0.16 | 0.15   |
-| Generation Time (s) | 8.80 | 3.34 | 9.98   |
-| Total Time (s)      | 8.98 | 3.34 | 10.14  |
+| Search Time (s)     | 0.27 | 0.12 | 0.22   |
+| Generation Time (s) | 2.65 | 2.07 | 3.70   |
+| Total Time (s)      | 2.92 | 2.08 | 3.91   |
 
-**Total Evaluation Time:** 15.3 minutes
+**Total Evaluation Time:** 5.0 minutes
 
 ---
 
