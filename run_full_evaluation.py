@@ -263,10 +263,14 @@ class FullEvaluator:
                 "raw_score": dist
             })
 
-        # Aggregate by segment
+        # Split combined results back into text and visual for proper aggregation
+        text_only = [r for r in combined if r.get("modal") == "text"]
+        visual_only = [r for r in combined if r.get("modal") == "visual"]
+
+        # Aggregate by segment with separate text and visual results
         segment_contexts = aggregate_results_by_segment(
-            text_results=combined,
-            visual_results=[],  # Already merged
+            text_results=text_only,
+            visual_results=visual_only,
             top_k=self.final_k,
             text_weight=0.6,
             visual_weight=0.4,
